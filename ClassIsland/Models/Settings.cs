@@ -216,6 +216,7 @@ public class Settings : ObservableRecipient, ILessonControlSettings, INotificati
     private string _selectedUpdateMirrorV2 = "main";
     private string _selectedUpdateChannelV2 = "stable";
     private GptSoVitsSpeechSettings _gptSoVitsSpeechSettings = new();
+    private ClassIsland.Models.Assistant.AssistantSettings _assistantSettings = new();
     private double _mainWindowLineVerticalMargin = 5;
     private ObservableCollection<Guid> _trustedProfileIds = [];
     private bool _isNonExactCountdownEnabled = false;
@@ -1599,6 +1600,20 @@ public class Settings : ObservableRecipient, ILessonControlSettings, INotificati
         {
             if (value == _notificationSpeechCustomSmgTokenSource) return;
             _notificationSpeechCustomSmgTokenSource = value;
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>
+    /// AI 助手 / 语音助手 / 桌面操作设置。
+    /// </summary>
+    public ClassIsland.Models.Assistant.AssistantSettings AssistantSettings
+    {
+        get => _assistantSettings;
+        set
+        {
+            if (Equals(value, _assistantSettings)) return;
+            _assistantSettings = value;
             OnPropertyChanged();
         }
     }

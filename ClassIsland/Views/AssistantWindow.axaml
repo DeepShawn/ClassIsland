@@ -1,0 +1,209 @@
+<ci:MyWindow x:Class="ClassIsland.Views.AssistantWindow"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:local="clr-namespace:ClassIsland.Views"
+             xmlns:ci="http://classisland.tech/schemas/xaml/core"
+             xmlns:assistant="clr-namespace:ClassIsland.Services.Assistant"
+             xmlns:fa="using:FluentAvalonia.UI.Controls"
+             mc:Ignorable="d"
+             d:DesignWidth="440" d:DesignHeight="680"
+             d:DataContext="{d:DesignInstance local:AssistantWindow}"
+             Title="AI 助手"
+             Width="440" Height="680"
+             MinWidth="360" MinHeight="420"
+             WindowStartupLocation="CenterScreen"
+             EnableMicaWindow="True"
+             Closing="AssistantWindow_OnClosing">
+    <ci:MyWindow.Styles>
+        <!-- 消息气泡 -->
+        <Style Selector="Border.bubble">
+            <Setter Property="CornerRadius" Value="14" />
+            <Setter Property="Padding" Value="12 8" />
+            <Setter Property="Margin" Value="0 4" />
+            <Setter Property="MaxWidth" Value="340" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.18" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Border.bubble.user">
+            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="14 14 4 14" />
+        </Style>
+        <Style Selector="Border.bubble.user SelectableTextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
+        </Style>
+        <Style Selector="Border.bubble.assistant">
+            <Setter Property="CornerRadius" Value="14 14 14 4" />
+        </Style>
+        <Style Selector="Border.bubble.tool">
+            <Setter Property="Padding" Value="10 4" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <Style Selector="Border.bubble.tool SelectableTextBlock">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Style>
+        <Style Selector="Border.bubble.error">
+            <Setter Property="Background" Value="{DynamicResource SystemFillColorCriticalBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+        </Style>
+        <Style Selector="Border.bubble.error SelectableTextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+        </Style>
+        <!-- 建议 -->
+        <Style Selector="Button.suggestion">
+            <Setter Property="CornerRadius" Value="16" />
+            <Setter Property="Padding" Value="12 6" />
+            <Setter Property="Margin" Value="0 0 6 6" />
+        </Style>
+        <!-- 输入栏圆形按钮 -->
+        <Style Selector="Button.round">
+            <Setter Property="Width" Value="36" />
+            <Setter Property="Height" Value="36" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="18" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.round ci|FluentIcon">
+            <Setter Property="FontSize" Value="18" />
+        </Style>
+        <Style Selector="Button.header">
+            <Setter Property="Padding" Value="6" />
+            <Setter Property="Theme" Value="{StaticResource TransparentButton}" />
+        </Style>
+    </ci:MyWindow.Styles>
+
+    <Grid RowDefinitions="Auto,*,Auto">
+        <!-- 标题栏 -->
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="16 12 12 8">
+            <Border Grid.Column="0" Width="36" Height="36" CornerRadius="18"
+                    Background="{DynamicResource AccentFillColorDefaultBrush}">
+                <ci:FluentIcon Glyph="&#xE275;" FontSize="20"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
+            </Border>
+            <StackPanel Grid.Column="1" Margin="10 0 0 0" VerticalAlignment="Center">
+                <TextBlock Text="ClassIsland 智能助手" FontWeight="SemiBold" FontSize="15" />
+                <TextBlock FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           TextTrimming="CharacterEllipsis">
+                    <Run Text="{Binding AssistantService.Settings.Model}" />
+                    <Run Text=" · " />
+                    <Run Text="{Binding VoiceAssistantService.Status}" />
+                </TextBlock>
+            </StackPanel>
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                <ToggleButton Padding="6" Theme="{StaticResource TransparentToggleButton}"
+                              ToolTip.Tip="置顶"
+                              IsChecked="{Binding Topmost, RelativeSource={RelativeSource AncestorType=Window}}">
+                    <ci:FluentIcon Glyph="&#xEDA1;" />
+                </ToggleButton>
+                <Button Classes="header" ToolTip.Tip="新对话" Click="ButtonClear_OnClick">
+                    <ci:FluentIcon Glyph="&#xE2C2;" />
+                </Button>
+                <Button Classes="header" ToolTip.Tip="助手设置" Click="ButtonSettings_OnClick">
+                    <ci:FluentIcon Glyph="&#xEF27;" />
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!-- 消息区 -->
+        <Grid Grid.Row="1">
+            <ScrollViewer x:Name="ScrollViewerMessages" Padding="16 4 16 8"
+                          HorizontalScrollBarVisibility="Disabled">
+                <ItemsControl ItemsSource="{Binding AssistantService.Messages}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="assistant:AssistantChatMessage">
+                            <Border Classes="bubble"
+                                    Classes.user="{Binding IsUser}"
+                                    Classes.assistant="{Binding IsAssistant}"
+                                    Classes.tool="{Binding IsTool}"
+                                    Classes.error="{Binding IsError}">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <SelectableTextBlock Grid.Column="0" Text="{Binding Text}" TextWrapping="Wrap"
+                                                         LineHeight="21" />
+                                    <fa:ProgressRing Grid.Column="1" IsIndeterminate="True" Width="16" Height="16"
+                                                     Margin="8 0 0 0" VerticalAlignment="Center"
+                                                     IsVisible="{Binding IsStreaming}" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <!-- 空状态 -->
+            <StackPanel x:Name="PanelEmpty" VerticalAlignment="Center" Margin="24 0"
+                        IsVisible="{Binding !AssistantService.Messages.Count}">
+                <ci:FluentIcon Glyph="&#xE40A;" FontSize="48" HorizontalAlignment="Center"
+                               Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                <TextBlock Text="有什么可以帮你？" FontSize="20" FontWeight="SemiBold"
+                           HorizontalAlignment="Center" Margin="0 12 0 4" />
+                <TextBlock Text="可以问我课表、天气，或者让我帮你操作电脑。"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"
+                           Margin="0 0 0 16" />
+                <WrapPanel HorizontalAlignment="Center">
+                    <Button Classes="suggestion" Content="现在上什么课？" Click="ButtonSuggestion_OnClick" />
+                    <Button Classes="suggestion" Content="今天的课表" Click="ButtonSuggestion_OnClick" />
+                    <Button Classes="suggestion" Content="今天天气怎么样？" Click="ButtonSuggestion_OnClick" />
+                    <Button Classes="suggestion" Content="把音量调高一点" Click="ButtonSuggestion_OnClick" />
+                    <Button Classes="suggestion" Content="打开计算器" Click="ButtonSuggestion_OnClick" />
+                    <Button Classes="suggestion" Content="显示桌面" Click="ButtonSuggestion_OnClick" />
+                    <Button Classes="suggestion" Content="5 分钟后提醒我收作业" Click="ButtonSuggestion_OnClick" />
+                </WrapPanel>
+            </StackPanel>
+        </Grid>
+
+        <!-- 输入栏 -->
+        <Border Grid.Row="2" Margin="12 4 12 12" Padding="6"
+                CornerRadius="22"
+                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <Button Grid.Column="0" Classes="round" Theme="{StaticResource TransparentButton}"
+                        ToolTip.Tip="语音输入"
+                        IsEnabled="{Binding !VoiceAssistantService.IsCapturing}"
+                        IsVisible="{Binding VoiceAssistantService.IsSupported}"
+                        Click="ButtonMic_OnClick">
+                    <ci:FluentIcon Glyph="&#xEB80;" />
+                </Button>
+                <TextBox Grid.Column="1" x:Name="TextBoxInput"
+                         Margin="4 0"
+                         MaxHeight="140"
+                         AcceptsReturn="True"
+                         TextWrapping="Wrap"
+                         VerticalContentAlignment="Center"
+                         BorderThickness="0"
+                         Background="Transparent"
+                         Watermark="输入消息，Enter 发送，Shift+Enter 换行" />
+                <Panel Grid.Column="2">
+                    <Button Classes="round accent"
+                            ToolTip.Tip="发送"
+                            IsVisible="{Binding !AssistantService.IsBusy}"
+                            Click="ButtonSend_OnClick">
+                        <ci:FluentIcon Glyph="&#xEF10;" />
+                    </Button>
+                    <Button Classes="round" ToolTip.Tip="停止"
+                            IsVisible="{Binding AssistantService.IsBusy}"
+                            Click="ButtonStop_OnClick">
+                        <ci:FluentIcon Glyph="&#xF086;" />
+                    </Button>
+                </Panel>
+            </Grid>
+        </Border>
+    </Grid>
+</ci:MyWindow>

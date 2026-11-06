@@ -1,0 +1,25 @@
+<ci:ActionSettingsControlBase x:Class="ClassIsland.Controls.ActionSettingsControls.DesktopMediaActionSettingsControl"
+                              x:TypeArguments="actionSettings:DesktopMediaActionSettings"
+                              d:DataContext="{d:DesignInstance Type=local:DesktopMediaActionSettingsControl}"
+                              xmlns="https://github.com/avaloniaui"
+                              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                              xmlns:ci="http://classisland.tech/schemas/xaml/core"
+                              xmlns:local="clr-namespace:ClassIsland.Controls.ActionSettingsControls"
+                              xmlns:actionSettings="clr-namespace:ClassIsland.Models.Actions">
+    <StackPanel Orientation="Horizontal" Spacing="6">
+        <ComboBox MinWidth="150" SelectedIndex="{Binding Settings.Key}">
+            <ComboBoxItem Content="音量 +" />
+            <ComboBoxItem Content="音量 -" />
+            <ComboBoxItem Content="静音 / 取消静音" />
+            <ComboBoxItem Content="播放 / 暂停" />
+            <ComboBoxItem Content="下一首" />
+            <ComboBoxItem Content="上一首" />
+            <ComboBoxItem Content="停止" />
+        </ComboBox>
+        <ci:Field Suffix="次" ToolTip.Tip="重复次数；调节音量时每次约 2%">
+            <NumericUpDown MinWidth="120" Minimum="1" Maximum="50" Increment="1" FormatString="0"
+                           Value="{Binding Settings.Repeat, Converter={x:Static ci:NotNaNConverter.Instance}}" />
+        </ci:Field>
+    </StackPanel>
+</ci:ActionSettingsControlBase>

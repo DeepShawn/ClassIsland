@@ -18,6 +18,7 @@ using ClassIsland.Services;
 using ClassIsland.Services.AppUpdating;
 using ClassIsland.Services.Management;
 using ClassIsland.Services.SpeechService;
+using ClassIsland.Services.Assistant;
 using ClassIsland.Views;
 // using ClassIsland.Views.SettingPages;
 
@@ -918,12 +919,14 @@ public partial class App : AppBase, IAppHost
         }
         GetService<IWindowRuleService>();
         GetService<SignalTriggerHandlerService>();
+        InitializeAssistant();
 
         // 注册uri导航
         var uriNavigationService = GetService<IUriNavigationService>();
         uriNavigationService.HandleAppNavigation("test", args => _ = CommonTaskDialogs.ShowDialog("测试导航", $"{args.Uri}"));
         uriNavigationService.HandleAppNavigation("settings", args => GetService<SettingsWindowNew>().OpenUri(args.Uri));
         uriNavigationService.HandleAppNavigation("profile", args => GetService<MainWindow>().OpenProfileSettingsWindow(args.Uri));
+        uriNavigationService.HandleAppNavigation("assistant", _ => GetService<AssistantWindow>().Open());
         uriNavigationService.HandleAppNavigation("helps", args => uriNavigationService.Navigate(new Uri("https://docs.classisland.tech/app/")));
         // uriNavigationService.HandleAppNavigation("profile/import-excel", args => GetService<ExcelImportWindow>().Show());
         // uriNavigationService.HandleAppNavigation("config-errors", args => GetService<ConfigErrorsWindow>().ShowDialog());
@@ -1175,6 +1178,24 @@ public partial class App : AppBase, IAppHost
             startInfo.ArgumentList.Add(i);
         }
         Process.Start(startInfo);
+    }
+
+    /// <summary>
+    /// 初始化 AI 助手与语音助手。
+    /// </summary>
+    private void InitializeAssistant()
+    {
+        try
+        {
+            var assistant = GetService<AssistantService>();
+            assistant.ConfirmHandler = message => GetService<AssistantWindow>().ConfirmAsync(message);
+            assistant.ShowWindowRequested += (_, _) => Dispatcher.UIThread.Post(() => GetService<AssistantWindow>().Open());
+            GetService<VoiceAssistantService>().Initialize();
+        }
+        catch (Exception e)
+        {
+            Logger?.LogError(e, "无法初始化 AI 助手");
+        }
     }
 
     private void NativeMenuItemOpenAbout_OnClick(object? sender, EventArgs e)

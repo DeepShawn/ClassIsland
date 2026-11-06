@@ -1,0 +1,207 @@
+<controls:SettingsPageBase x:Class="ClassIsland.Views.SettingPages.AssistantSettingsPage"
+                           xmlns="https://github.com/avaloniaui"
+                           xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                           xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                           xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                           xmlns:local="clr-namespace:ClassIsland.Views.SettingPages"
+                           xmlns:controls="clr-namespace:ClassIsland.Core.Abstractions.Controls;assembly=ClassIsland.Core"
+                           xmlns:ci="http://classisland.tech/schemas/xaml/core"
+                           xmlns:fa="using:FluentAvalonia.UI.Controls"
+                           mc:Ignorable="d"
+                           d:DesignHeight="900" d:DesignWidth="800"
+                           d:DataContext="{d:DesignInstance local:AssistantSettingsPage}">
+    <ScrollViewer>
+        <StackPanel Classes="settings-container animated-intro" Tag="CanPolicyDisable">
+            <!-- 头部 -->
+            <Border Margin="0 0 0 12" Padding="20" CornerRadius="8"
+                    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                    <Border Width="52" Height="52" CornerRadius="26"
+                            Background="{DynamicResource AccentFillColorDefaultBrush}">
+                        <ci:FluentIcon Glyph="&#xE275;" FontSize="28"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
+                    </Border>
+                    <StackPanel Grid.Column="1" Margin="16 0" VerticalAlignment="Center">
+                        <TextBlock Text="AI 助手" Theme="{StaticResource SubtitleTextBlockStyle}" />
+                        <TextBlock TextWrapping="Wrap" Margin="0 4 0 0"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Text="接入任意 OpenAI 兼容的大模型接口，用自然语言查询课表、天气，或让 AI 帮你操作电脑；也可以通过语音唤醒。" />
+                    </StackPanel>
+                    <Button Grid.Column="2" Classes="accent" VerticalAlignment="Center"
+                            Click="ButtonOpenAssistant_OnClick">
+                        <ci:IconText Glyph="&#xE276;" Text="打开助手" />
+                    </Button>
+                </Grid>
+            </Border>
+
+            <fa:SettingsExpander IconSource="{ci:FluentIconSource &#xE276;}"
+                                 Header="启用 AI 助手"
+                                 Description="关闭后将无法使用 AI 对话、语音助手和“询问 AI 助手”行动。">
+                <fa:SettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Settings.IsEnabled, Mode=TwoWay}" />
+                </fa:SettingsExpander.Footer>
+            </fa:SettingsExpander>
+
+            <!-- 模型接口 -->
+            <ci:IconText Glyph="&#xEDC7;" Text="模型接口" Margin="0 16 0 4" />
+            <fa:SettingsExpander IconSource="{ci:FluentIconSource &#xEDC7;}"
+                                 Header="服务商预设"
+                                 Description="选择预设可自动填写接口地址和推荐模型。任何兼容 OpenAI /chat/completions 的服务均可使用。"
+                                 IsExpanded="True">
+                <fa:SettingsExpander.Footer>
+                    <ComboBox MinWidth="180" x:Name="ComboBoxPreset"
+                              SelectionChanged="ComboBoxPreset_OnSelectionChanged"
+                              PlaceholderText="选择预设…">
+                        <ComboBoxItem Content="DeepSeek" />
+                        <ComboBoxItem Content="OpenAI" />
+                        <ComboBoxItem Content="通义千问（阿里云百炼）" />
+                        <ComboBoxItem Content="Kimi（月之暗面）" />
+                        <ComboBoxItem Content="智谱 GLM" />
+                        <ComboBoxItem Content="硅基流动" />
+                        <ComboBoxItem Content="Ollama（本地）" />
+                    </ComboBox>
+                </fa:SettingsExpander.Footer>
+                <fa:SettingsExpanderItem Content="接口地址（Base URL）">
+                    <fa:SettingsExpanderItem.Footer>
+                        <TextBox MinWidth="300" Text="{Binding Settings.ApiBaseUrl, Mode=TwoWay}"
+                                 Watermark="https://api.example.com/v1" />
+                    </fa:SettingsExpanderItem.Footer>
+                </fa:SettingsExpanderItem>
+                <fa:SettingsExpanderItem Content="API 密钥" Description="密钥仅保存在本机的配置文件中。">
+                    <fa:SettingsExpanderItem.Footer>
+                        <TextBox MinWidth="300" PasswordChar="•"
+                                 Text="{Binding Settings.ApiKey, Mode=TwoWay}"
+                                 Watermark="sk-..." />
+                    </fa:SettingsExpanderItem.Footer>
+                </fa:SettingsExpanderItem>
+                <fa:SettingsExpanderItem Content="模型" Description="模型需要支持工具调用（Function Calling）才能操作电脑。">
+                    <fa:SettingsExpanderItem.Footer>
+                        <TextBox MinWidth="300" Text="{Binding Settings.Model, Mode=TwoWay}"
+                                 Watermark="deepseek-chat" />
+                    </fa:SettingsExpanderItem.Footer>
+                </fa:SettingsExpanderItem>
+                <fa:SettingsExpanderItem Content="温度" Description="越低越稳定，越高越有创意。">
+                    <fa:SettingsExpanderItem.Footer>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Slider Width="200" Minimum="0" Maximum="1.5" TickFrequency="0.1"
+                                    IsSnapToTickEnabled="True"
+                                    Value="{Binding Settings.Temperature, Mode=TwoWay}" />
+                            <TextBlock VerticalAlignment="Center" MinWidth="28"
+                                       Text="{Binding Settings.Temperature, StringFormat={}{0:0.0}}" />
+                        </StackPanel>
+                    </fa:SettingsExpanderItem.Footer>
+                </fa:SettingsExpanderItem>
+                <fa:SettingsExpanderItem Content="测试连接">
+                    <fa:SettingsExpanderItem.Footer>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock VerticalAlignment="Center" MaxWidth="320" TextWrapping="Wrap"
+                                       Text="{Binding TestResult}" />
+                            <fa:ProgressRing Width="18" Height="18" IsIndeterminate="True"
+                                             IsVisible="{Binding IsTesting}" />
+                            <Button Content="测试" Click="ButtonTest_OnClick" IsEnabled="{Binding !IsTesting}" />
+                        </StackPanel>
+                    </fa:SettingsExpanderItem.Footer>
+                </fa:SettingsExpanderItem>
+            </fa:SettingsExpander>
+
+            <!-- 能力 -->
+            <ci:IconText Glyph="&#xEF4F;" Text="能力与安全" Margin="0 16 0 4" />
+            <fa:SettingsExpander IconSource="{ci:FluentIconSource &#xF4C1;}"
+                                 Header="允许 AI 操作电脑"
+                                 Description="允许 AI 调用工具：打开程序/网址、调节音量、媒体控制、锁屏、显示桌面、截图、查询课表和天气、显示提醒等。">
+                <fa:SettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Settings.IsDesktopToolsEnabled, Mode=TwoWay}" />
+                </fa:SettingsExpander.Footer>
+            </fa:SettingsExpander>
+            <fa:SettingsExpander IconSource="{ci:FluentIconSource &#xF499;}"
+                                 Header="允许 AI 执行命令行命令"
+                                 Description="高风险：AI 将可以在 cmd / bash 中执行任意命令。仅在你信任所用模型时开启。">
+                <fa:SettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Settings.IsCommandToolEnabled, Mode=TwoWay}"
+                                  IsEnabled="{Binding Settings.IsDesktopToolsEnabled}" />
+                </fa:SettingsExpander.Footer>
+            </fa:SettingsExpander>
+            <fa:SettingsExpander IconSource="{ci:FluentIconSource &#xEF4F;}"
+                                 Header="高风险操作前确认"
+                                 Description="关机/重启、关闭程序、执行命令前弹窗确认。强烈建议保持开启。">
+                <fa:SettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Settings.ConfirmDangerousOperations, Mode=TwoWay}" />
+                </fa:SettingsExpander.Footer>
+            </fa:SettingsExpander>
+            <fa:SettingsExpander IconSource="{ci:FluentIconSource &#xF00D;}"
+                                 Header="朗读 AI 回复"
+                                 Description="使用【设置 → 提醒 → 语音】中配置的语音合成服务朗读回复。语音交互时总会朗读。">
+                <fa:SettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Settings.IsSpeakReplyEnabled, Mode=TwoWay}" />
+                </fa:SettingsExpander.Footer>
+            </fa:SettingsExpander>
+
+            <!-- 语音助手 -->
+            <ci:IconText Glyph="&#xED53;" Text="语音助手" Margin="0 16 0 4" />
+            <fa:SettingsExpander IconSource="{ci:FluentIconSource &#xED53;}"
+                                 Header="启用语音唤醒"
+                                 Description="{Binding VoiceAssistantService.Status, StringFormat=后台监听唤醒词，说出唤醒词后再说出指令。当前状态：{0}}"
+                                 IsEnabled="{Binding VoiceAssistantService.IsSupported}">
+                <fa:SettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Settings.IsVoiceAssistantEnabled, Mode=TwoWay}" />
+                </fa:SettingsExpander.Footer>
+                <fa:SettingsExpanderItem Content="唤醒词" Description="建议使用 3~5 个字、不常见的词，以减少误唤醒。">
+                    <fa:SettingsExpanderItem.Footer>
+                        <TextBox MinWidth="200" Text="{Binding Settings.WakeWord, Mode=TwoWay}" />
+                    </fa:SettingsExpanderItem.Footer>
+                </fa:SettingsExpanderItem>
+                <fa:SettingsExpanderItem Content="识别语言" Description="需要在系统中安装对应语言的语音识别组件。">
+                    <fa:SettingsExpanderItem.Footer>
+                        <ComboBox MinWidth="200" SelectedItem="{Binding Settings.RecognitionCulture, Mode=TwoWay}"
+                                  ItemsSource="{Binding Cultures}" />
+                    </fa:SettingsExpanderItem.Footer>
+                </fa:SettingsExpanderItem>
+                <fa:SettingsExpanderItem Content="识别置信度阈值" Description="低于此值的识别结果会被忽略。">
+                    <fa:SettingsExpanderItem.Footer>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Slider Width="200" Minimum="0.1" Maximum="0.95" TickFrequency="0.05"
+                                    IsSnapToTickEnabled="True"
+                                    Value="{Binding Settings.RecognitionConfidenceThreshold, Mode=TwoWay}" />
+                            <TextBlock VerticalAlignment="Center" MinWidth="28"
+                                       Text="{Binding Settings.RecognitionConfidenceThreshold, StringFormat={}{0:0.00}}" />
+                        </StackPanel>
+                    </fa:SettingsExpanderItem.Footer>
+                </fa:SettingsExpanderItem>
+                <fa:SettingsExpanderItem Content="唤醒时显示助手窗口">
+                    <fa:SettingsExpanderItem.Footer>
+                        <ToggleSwitch IsChecked="{Binding Settings.ShowWindowOnWake, Mode=TwoWay}" />
+                    </fa:SettingsExpanderItem.Footer>
+                </fa:SettingsExpanderItem>
+            </fa:SettingsExpander>
+
+            <!-- 高级 -->
+            <ci:IconText Glyph="&#xEF27;" Text="高级" Margin="0 16 0 4" />
+            <fa:SettingsExpander IconSource="{ci:FluentIconSource &#xF216;}"
+                                 Header="附加系统提示词"
+                                 Description="追加到内置提示词之后，可用于设定助手的身份、称呼、回答风格等。">
+                <fa:SettingsExpanderItem>
+                    <TextBox AcceptsReturn="True" TextWrapping="Wrap" MinHeight="80"
+                             Text="{Binding Settings.CustomSystemPrompt, Mode=TwoWay}"
+                             Watermark="例如：你是高一（3）班的班级助手，称呼用户为“老师”。" />
+                </fa:SettingsExpanderItem>
+            </fa:SettingsExpander>
+            <fa:SettingsExpander IconSource="{ci:FluentIconSource &#xE990;}"
+                                 Header="上下文与超时">
+                <fa:SettingsExpanderItem Content="保留的历史消息条数">
+                    <fa:SettingsExpanderItem.Footer>
+                        <NumericUpDown MinWidth="140" Minimum="2" Maximum="100" Increment="2" FormatString="0"
+                                       Value="{Binding Settings.MaxHistoryMessages, Mode=TwoWay}" />
+                    </fa:SettingsExpanderItem.Footer>
+                </fa:SettingsExpanderItem>
+                <fa:SettingsExpanderItem Content="请求超时（秒）">
+                    <fa:SettingsExpanderItem.Footer>
+                        <NumericUpDown MinWidth="140" Minimum="5" Maximum="600" Increment="5" FormatString="0"
+                                       Value="{Binding Settings.RequestTimeoutSeconds, Mode=TwoWay, Converter={x:Static ci:NotNaNConverter.Instance}}" />
+                    </fa:SettingsExpanderItem.Footer>
+                </fa:SettingsExpanderItem>
+            </fa:SettingsExpander>
+        </StackPanel>
+    </ScrollViewer>
+</controls:SettingsPageBase>

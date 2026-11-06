@@ -1265,6 +1265,11 @@ public partial class MainWindow : Window, ITopmostEffectPlayer
     {
         IAppHost.GetService<TutorialCenterWindow>().Open();
     }
+
+    private void NativeMenuItemAssistant_OnClick(object? sender, EventArgs e)
+    {
+        IAppHost.GetService<AssistantWindow>().Open();
+    }
     #endregion
 
     #region Gateways

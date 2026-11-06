@@ -38,6 +38,7 @@ using ClassIsland.Services.Management;
 using ClassIsland.Services.Metadata;
 using ClassIsland.Services.NotificationProviders;
 using ClassIsland.Services.SpeechService;
+using ClassIsland.Services.Assistant;
 using ClassIsland.ViewModels;
 using ClassIsland.ViewModels.EditMode;
 using ClassIsland.ViewModels.SettingsPages;
@@ -100,6 +101,10 @@ public partial class App
         services.AddSingleton<IAudioService, AudioService>();
         services.AddSingleton<ITutorialService, TutorialService>();
         services.AddSingleton<IRefreshingService, RefreshingService>();
+        // AI 助手 / 语音助手 / 桌面操作
+        services.AddSingleton<DesktopOperationService>();
+        services.AddSingleton<AssistantService>();
+        services.AddSingleton<VoiceAssistantService>();
         // ViewModels
         services.AddTransient<ProfileSettingsViewModel>();
         services.AddTransient<DevPortalViewModel>();
@@ -150,6 +155,7 @@ public partial class App
         services.AddSingleton<EditModeView>();
         services.AddTransient<TutorialEditorWindow>();
         services.AddSingleton<TutorialCenterWindow>();
+        services.AddSingleton<AssistantWindow>();
         services.AddTransient<TutorialControllerWindow>();
         services.AddTransient<ISplashProvider, SplashWindow>();
         // 设置页面分组
@@ -168,6 +174,7 @@ public partial class App
         services.AddSettingsPage<WindowSettingsPage>();
         services.AddSettingsPage<WeatherSettingsPage>();
         services.AddSettingsPage<AutomationSettingsPage>();
+        services.AddSettingsPage<AssistantSettingsPage>();
         if (UpdateService.AllowedPackageTypes.Contains(PackagingType))
         {
             services.AddSettingsPage<UpdateSettingsPage>();
@@ -274,6 +281,11 @@ public partial class App
         services.AddAction<WeatherNotificationAction, WeatherNotificationActionSettingControl>();
         services.AddAction<AppQuitAction>();
         services.AddAction<AppRestartAction, AppRestartActionSettingsControl>();
+        services.AddAction<DesktopMediaAction, DesktopMediaActionSettingsControl>();
+        services.AddAction<LockScreenAction>();
+        services.AddAction<ShowDesktopAction>();
+        services.AddAction<DesktopPowerAction, DesktopPowerActionSettingsControl>();
+        services.AddAction<AskAssistantAction, AskAssistantActionSettingsControl>();
 
         // 认证提供方
         services.AddAuthorizeProvider<PasswordAuthorizeProvider>();

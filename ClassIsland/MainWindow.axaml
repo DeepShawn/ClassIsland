@@ -96,6 +96,8 @@
                             ci:NativeMenuItemAssist.IconSource="{ci:FluentIconSource &#xEBAC;}"
                             IsVisible="{Binding !!$self.Menu.Items.Count}"/>
             <NativeMenuItemSeparator/>
+            <NativeMenuItem Header="AI 助手…" Click="NativeMenuItemAssistant_OnClick"
+                            ci:NativeMenuItemAssist.IconSource="{ci:FluentIconSource &#xE276;}"/>
             <NativeMenuItem Header="编辑档案…" Click="ButtonSettings_OnClick" 
                             ci:NativeMenuItemAssist.IconSource="{ci:FluentIconSource &#xE699;}"/>
             <NativeMenuItem Header="加载临时课表…" Click="MenuItemTemporaryClassPlan_OnClick"

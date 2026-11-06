@@ -1,0 +1,26 @@
+<ci:ActionSettingsControlBase x:Class="ClassIsland.Controls.ActionSettingsControls.DesktopPowerActionSettingsControl"
+                              x:TypeArguments="actionSettings:DesktopPowerActionSettings"
+                              d:DataContext="{d:DesignInstance Type=local:DesktopPowerActionSettingsControl}"
+                              xmlns="https://github.com/avaloniaui"
+                              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                              xmlns:ci="http://classisland.tech/schemas/xaml/core"
+                              xmlns:local="clr-namespace:ClassIsland.Controls.ActionSettingsControls"
+                              xmlns:actionSettings="clr-namespace:ClassIsland.Models.Actions">
+    <StackPanel Spacing="6">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+            <ComboBox MinWidth="150" SelectedIndex="{Binding Settings.Operation}">
+                <ComboBoxItem Content="关机" />
+                <ComboBoxItem Content="重启" />
+                <ComboBoxItem Content="睡眠" />
+                <ComboBoxItem Content="注销" />
+            </ComboBox>
+            <ci:Field Suffix="秒后" ToolTip.Tip="仅关机/重启有效。Windows 下可运行 shutdown /a 取消。">
+                <NumericUpDown MinWidth="120" Minimum="0" Maximum="3600" Increment="10" FormatString="0"
+                               Value="{Binding Settings.DelaySeconds, Converter={x:Static ci:NotNaNConverter.Instance}}" />
+            </ci:Field>
+        </StackPanel>
+        <TextBlock TextWrapping="Wrap" FontSize="12"
+                   Text="提示：此行动会直接执行，请谨慎配置触发条件。" />
+    </StackPanel>
+</ci:ActionSettingsControlBase>

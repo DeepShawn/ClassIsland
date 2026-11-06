@@ -1,0 +1,20 @@
+<ci:ActionSettingsControlBase x:Class="ClassIsland.Controls.ActionSettingsControls.AskAssistantActionSettingsControl"
+                              x:TypeArguments="actionSettings:AskAssistantActionSettings"
+                              d:DataContext="{d:DesignInstance Type=local:AskAssistantActionSettingsControl}"
+                              xmlns="https://github.com/avaloniaui"
+                              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                              xmlns:ci="http://classisland.tech/schemas/xaml/core"
+                              xmlns:local="clr-namespace:ClassIsland.Controls.ActionSettingsControls"
+                              xmlns:actionSettings="clr-namespace:ClassIsland.Models.Actions">
+    <StackPanel Spacing="6">
+        <TextBox Text="{Binding Settings.Prompt, Mode=TwoWay}"
+                 AcceptsReturn="True" TextWrapping="Wrap" MinHeight="60"
+                 Watermark="例如：现在是什么课？请帮我打开希沃白板并把音量调到适中" />
+        <WrapPanel>
+            <CheckBox Content="显示助手窗口" Margin="0 0 12 0" IsChecked="{Binding Settings.ShowWindow}" />
+            <CheckBox Content="朗读回复" Margin="0 0 12 0" IsChecked="{Binding Settings.SpeakReply}" />
+            <CheckBox Content="等待回复完成" IsChecked="{Binding Settings.WaitForReply}" />
+        </WrapPanel>
+    </StackPanel>
+</ci:ActionSettingsControlBase>
