@@ -9,6 +9,8 @@ using ClassIsland.Core.Enums.SettingsWindow;
 using ClassIsland.Models.Assistant;
 using ClassIsland.Services;
 using ClassIsland.Services.Assistant;
+using ClassIsland.Core.Abstractions.Services;
+using ClassIsland.Shared;
 
 namespace ClassIsland.Views.SettingPages;
 
@@ -18,16 +20,8 @@ namespace ClassIsland.Views.SettingPages;
 [SettingsPageInfo("assistant", "AI 助手", "\ue276", "\ue275", SettingsPageCategory.Internal)]
 public partial class AssistantSettingsPage : SettingsPageBase
 {
-    private static readonly (string BaseUrl, string Model)[] Presets =
-    [
-        ("https://api.deepseek.com/v1", "deepseek-chat"),
-        ("https://api.openai.com/v1", "gpt-4o-mini"),
-        ("https://dashscope.aliyuncs.com/compatible-mode/v1", "qwen-plus"),
-        ("https://api.moonshot.cn/v1", "moonshot-v1-8k"),
-        ("https://open.bigmodel.cn/api/paas/v4", "glm-4-flash"),
-        ("https://api.siliconflow.cn/v1", "Qwen/Qwen2.5-7B-Instruct"),
-        ("http://localhost:11434/v1", "qwen2.5:7b"),
-    ];
+    /// <summary>可选的连接模板。</summary>
+    public IReadOnlyList<AiProviderTemplate> Templates => AiProviderTemplate.All;
 
     public SettingsService SettingsService { get; }
     public AssistantService AssistantService { get; }
@@ -63,15 +57,31 @@ public partial class AssistantSettingsPage : SettingsPageBase
         VoiceAssistantService = voiceAssistantService;
         InitializeComponent();
         DataContext = this;
+        ComboBoxTemplate.SelectedItem = Settings.Template;
     }
 
-    private void ComboBoxPreset_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    private void ComboBoxTemplate_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (sender is not ComboBox { SelectedIndex: >= 0 } box || box.SelectedIndex >= Presets.Length)
+        if (ComboBoxTemplate.SelectedItem is not AiProviderTemplate template ||
+            template.Id == Settings.ProviderTemplateId)
             return;
-        var preset = Presets[box.SelectedIndex];
-        Settings.ApiBaseUrl = preset.BaseUrl;
-        Settings.Model = preset.Model;
+        // 从内置模板切换到自定义时，以当前模板的值作为起点，方便修改
+        if (template.IsCustom)
+        {
+            if (string.IsNullOrWhiteSpace(Settings.ApiBaseUrl))
+                Settings.ApiBaseUrl = Settings.EffectiveApiBaseUrl;
+            if (string.IsNullOrWhiteSpace(Settings.Model))
+                Settings.Model = Settings.EffectiveModel;
+        }
+        Settings.ProviderTemplateId = template.Id;
+        TestResult = "";
+    }
+
+    private void ButtonGetApiKey_OnClick(object? sender, RoutedEventArgs e)
+    {
+        var url = Settings.Template.ApiKeyUrl;
+        if (!string.IsNullOrWhiteSpace(url))
+            IAppHost.GetService<IUriNavigationService>().Navigate(new Uri(url));
     }
 
     private async void ButtonTest_OnClick(object? sender, RoutedEventArgs e)

@@ -44,42 +44,65 @@
                 </fa:SettingsExpander.Footer>
             </fa:SettingsExpander>
 
-            <!-- 模型接口 -->
-            <ci:IconText Glyph="&#xEDC7;" Text="模型接口" Margin="0 16 0 4" />
+            <!-- 连接模板 -->
+            <ci:IconText Glyph="&#xEDC7;" Text="连接" Margin="0 16 0 4" />
             <fa:SettingsExpander IconSource="{ci:FluentIconSource &#xEDC7;}"
-                                 Header="服务商预设"
-                                 Description="选择预设可自动填写接口地址和推荐模型。任何兼容 OpenAI /chat/completions 的服务均可使用。"
+                                 Header="连接模板"
+                                 Description="选择模板后接口地址和模型会自动填充，只需填写 API Key 即可连接。"
                                  IsExpanded="True">
                 <fa:SettingsExpander.Footer>
-                    <ComboBox MinWidth="180" x:Name="ComboBoxPreset"
-                              SelectionChanged="ComboBoxPreset_OnSelectionChanged"
-                              PlaceholderText="选择预设…">
-                        <ComboBoxItem Content="DeepSeek" />
-                        <ComboBoxItem Content="OpenAI" />
-                        <ComboBoxItem Content="通义千问（阿里云百炼）" />
-                        <ComboBoxItem Content="Kimi（月之暗面）" />
-                        <ComboBoxItem Content="智谱 GLM" />
-                        <ComboBoxItem Content="硅基流动" />
-                        <ComboBoxItem Content="Ollama（本地）" />
+                    <ComboBox MinWidth="220" x:Name="ComboBoxTemplate"
+                              ItemsSource="{Binding Templates}"
+                              SelectionChanged="ComboBoxTemplate_OnSelectionChanged">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Name}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
                     </ComboBox>
                 </fa:SettingsExpander.Footer>
-                <fa:SettingsExpanderItem Content="接口地址（Base URL）">
+                <fa:SettingsExpanderItem Content="API Key"
+                                         Description="密钥仅保存在本机的配置文件中。"
+                                         IsVisible="{Binding Settings.Template.RequiresApiKey}">
+                    <fa:SettingsExpanderItem.Footer>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBox MinWidth="300" PasswordChar="•"
+                                     Text="{Binding Settings.ApiKey, Mode=TwoWay}"
+                                     Watermark="粘贴 API Key（sk-...）" />
+                            <Button Click="ButtonGetApiKey_OnClick"
+                                    IsVisible="{Binding !Settings.IsCustomProvider}">
+                                <ci:IconText Glyph="&#xEA01;" Text="获取 API Key" />
+                            </Button>
+                        </StackPanel>
+                    </fa:SettingsExpanderItem.Footer>
+                </fa:SettingsExpanderItem>
+                <!-- 内置模板：只读显示自动填充的值 -->
+                <fa:SettingsExpanderItem Content="接口地址（自动填充）" IsVisible="{Binding !Settings.IsCustomProvider}">
+                    <fa:SettingsExpanderItem.Footer>
+                        <SelectableTextBlock Text="{Binding Settings.EffectiveApiBaseUrl}"
+                                             Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </fa:SettingsExpanderItem.Footer>
+                </fa:SettingsExpanderItem>
+                <fa:SettingsExpanderItem Content="模型（自动填充）" IsVisible="{Binding !Settings.IsCustomProvider}">
+                    <fa:SettingsExpanderItem.Footer>
+                        <SelectableTextBlock Text="{Binding Settings.EffectiveModel}"
+                                             Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </fa:SettingsExpanderItem.Footer>
+                </fa:SettingsExpanderItem>
+                <!-- 自定义模板：手动填写 -->
+                <fa:SettingsExpanderItem Content="接口地址（Base URL）"
+                                         Description="任何兼容 OpenAI /chat/completions 的服务均可使用。"
+                                         IsVisible="{Binding Settings.IsCustomProvider}">
                     <fa:SettingsExpanderItem.Footer>
                         <TextBox MinWidth="300" Text="{Binding Settings.ApiBaseUrl, Mode=TwoWay}"
                                  Watermark="https://api.example.com/v1" />
                     </fa:SettingsExpanderItem.Footer>
                 </fa:SettingsExpanderItem>
-                <fa:SettingsExpanderItem Content="API 密钥" Description="密钥仅保存在本机的配置文件中。">
-                    <fa:SettingsExpanderItem.Footer>
-                        <TextBox MinWidth="300" PasswordChar="•"
-                                 Text="{Binding Settings.ApiKey, Mode=TwoWay}"
-                                 Watermark="sk-..." />
-                    </fa:SettingsExpanderItem.Footer>
-                </fa:SettingsExpanderItem>
-                <fa:SettingsExpanderItem Content="模型" Description="模型需要支持工具调用（Function Calling）才能操作电脑。">
+                <fa:SettingsExpanderItem Content="模型" Description="模型需要支持工具调用（Function Calling）才能操作电脑。"
+                                         IsVisible="{Binding Settings.IsCustomProvider}">
                     <fa:SettingsExpanderItem.Footer>
                         <TextBox MinWidth="300" Text="{Binding Settings.Model, Mode=TwoWay}"
-                                 Watermark="deepseek-chat" />
+                                 Watermark="model-name" />
                     </fa:SettingsExpanderItem.Footer>
                 </fa:SettingsExpanderItem>
                 <fa:SettingsExpanderItem Content="温度" Description="越低越稳定，越高越有创意。">

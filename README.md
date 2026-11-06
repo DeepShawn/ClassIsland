@@ -38,7 +38,7 @@ ClassIsland 是一款适用于班级多媒体屏幕的跨平台课表信息显�
 >
 > 本仓库是 [ClassIsland/ClassIsland](https://github.com/ClassIsland/ClassIsland) 的分支，保留上游全部功能，并在此基础上新增以下能力（遵循 GPLv3 协议）。
 
-- **AI 助手**：托盘菜单【AI 助手…】或 `classisland://app/assistant` 打开对话窗口。支持任意 OpenAI 兼容接口（DeepSeek、OpenAI、通义千问、Kimi、智谱、硅基流动、Ollama 本地模型等），流式输出，支持工具调用：
+- **AI 助手**：托盘菜单【AI 助手…】或 `classisland://app/assistant` 打开对话窗口。内置连接模板（默认 DeepSeek，另有通义千问、Kimi、智谱、硅基流动、OpenAI、Ollama 和自定义），选择模板后接口地址和模型自动填充，**只需填写 API Key** 即可使用；流式输出，支持工具调用：
   - ClassIsland：查询今日课表、当前课程状态、天气；显示提醒；朗读文本；显示/隐藏主界面；打开设置页面。
   - 桌面操作：打开程序/文件/网址、调节音量、媒体控制、锁屏、显示桌面、截图、查询系统信息、列出/关闭程序、写入剪贴板、关机/重启/睡眠。
   - 可选：执行命令行命令（默认关闭）。高风险操作执行前弹窗确认（默认开启）。

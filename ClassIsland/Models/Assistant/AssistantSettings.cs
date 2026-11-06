@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace ClassIsland.Models.Assistant;
@@ -10,14 +11,48 @@ public partial class AssistantSettings : ObservableRecipient
     /// <summary>是否启用 AI 助手。</summary>
     [ObservableProperty] private bool _isEnabled = true;
 
-    /// <summary>OpenAI 兼容接口的 Base URL（如 https://api.openai.com/v1、https://api.deepseek.com/v1）。</summary>
-    [ObservableProperty] private string _apiBaseUrl = "https://api.deepseek.com/v1";
+    /// <summary>
+    /// 连接模板 ID（见 <see cref="AiProviderTemplate.All"/>）。选择内置模板时接口地址和模型自动填充，只需填写 API Key。
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Template), nameof(IsCustomProvider), nameof(EffectiveApiBaseUrl),
+        nameof(EffectiveModel), nameof(IsApiKeyMissing))]
+    private string _providerTemplateId = AiProviderTemplate.DefaultId;
 
     /// <summary>API 密钥。</summary>
-    [ObservableProperty] private string _apiKey = "";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsApiKeyMissing))]
+    private string _apiKey = "";
 
-    /// <summary>模型名称。</summary>
-    [ObservableProperty] private string _model = "deepseek-chat";
+    /// <summary>自定义模板的接口地址。</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(EffectiveApiBaseUrl))]
+    private string _apiBaseUrl = "";
+
+    /// <summary>自定义模板的模型名称。</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(EffectiveModel))]
+    private string _model = "";
+
+    /// <summary>当前连接模板。</summary>
+    [JsonIgnore]
+    public AiProviderTemplate Template => AiProviderTemplate.Get(ProviderTemplateId);
+
+    /// <summary>是否为自定义模板。</summary>
+    [JsonIgnore]
+    public bool IsCustomProvider => Template.IsCustom;
+
+    /// <summary>实际使用的接口地址（内置模板自动填充）。</summary>
+    [JsonIgnore]
+    public string EffectiveApiBaseUrl => Template.IsCustom ? ApiBaseUrl : Template.BaseUrl;
+
+    /// <summary>实际使用的模型（内置模板自动填充）。</summary>
+    [JsonIgnore]
+    public string EffectiveModel => Template.IsCustom ? Model : Template.Model;
+
+    /// <summary>是否还需要填写 API Key。</summary>
+    [JsonIgnore]
+    public bool IsApiKeyMissing => Template.RequiresApiKey && string.IsNullOrWhiteSpace(ApiKey);
 
     /// <summary>采样温度。</summary>
     [ObservableProperty] private double _temperature = 0.6;

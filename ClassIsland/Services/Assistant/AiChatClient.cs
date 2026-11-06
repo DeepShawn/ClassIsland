@@ -47,14 +47,18 @@ public class AiChatClient
         Action<string>? onContentDelta,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(settings.ApiBaseUrl))
+        var baseUrl = settings.EffectiveApiBaseUrl;
+        var model = settings.EffectiveModel;
+        if (settings.IsApiKeyMissing)
+            throw new InvalidOperationException($"还没有填写 {settings.Template.Name} 的 API Key，请在助手窗口或【设置 → AI 助手】中粘贴 API Key。");
+        if (string.IsNullOrWhiteSpace(baseUrl))
             throw new InvalidOperationException("尚未配置 AI 接口地址，请在【设置 → AI 助手】中填写。");
-        if (string.IsNullOrWhiteSpace(settings.Model))
+        if (string.IsNullOrWhiteSpace(model))
             throw new InvalidOperationException("尚未配置模型名称，请在【设置 → AI 助手】中填写。");
 
         var body = new JsonObject
         {
-            ["model"] = settings.Model,
+            ["model"] = model,
             ["stream"] = true,
             ["temperature"] = settings.Temperature,
             ["messages"] = new JsonArray(messages.Select(x => x.DeepClone()).ToArray())
@@ -65,7 +69,7 @@ public class AiChatClient
             body["tool_choice"] = "auto";
         }
 
-        var url = settings.ApiBaseUrl.TrimEnd('/') + "/chat/completions";
+        var url = baseUrl.TrimEnd('/') + "/chat/completions";
         using var request = new HttpRequestMessage(HttpMethod.Post, url);
         request.Content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json");
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));

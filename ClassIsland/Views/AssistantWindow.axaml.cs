@@ -118,6 +118,23 @@ public partial class AssistantWindow : MyWindow
             _ = SendAsync(text);
     }
 
+    private void ButtonSaveApiKey_OnClick(object? sender, RoutedEventArgs e)
+    {
+        var key = TextBoxApiKey.Text?.Trim();
+        if (string.IsNullOrEmpty(key))
+            return;
+        AssistantService.Settings.ApiKey = key;
+        TextBoxApiKey.Text = "";
+        TextBoxInput.Focus();
+    }
+
+    private void ButtonGetApiKey_OnClick(object? sender, RoutedEventArgs e)
+    {
+        var url = AssistantService.Settings.Template.ApiKeyUrl;
+        if (!string.IsNullOrWhiteSpace(url))
+            App.GetService<ClassIsland.Core.Abstractions.Services.IUriNavigationService>().Navigate(new Uri(url));
+    }
+
     private void ButtonClear_OnClick(object? sender, RoutedEventArgs e) => AssistantService.ClearConversation();
 
     private void ButtonSettings_OnClick(object? sender, RoutedEventArgs e) =>

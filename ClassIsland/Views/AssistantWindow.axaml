@@ -99,7 +99,7 @@
                 <TextBlock Text="ClassIsland 智能助手" FontWeight="SemiBold" FontSize="15" />
                 <TextBlock FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                            TextTrimming="CharacterEllipsis">
-                    <Run Text="{Binding AssistantService.Settings.Model}" />
+                    <Run Text="{Binding AssistantService.Settings.EffectiveModel}" />
                     <Run Text=" · " />
                     <Run Text="{Binding VoiceAssistantService.Status}" />
                 </TextBlock>
@@ -155,7 +155,30 @@
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                            HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"
                            Margin="0 0 0 16" />
-                <WrapPanel HorizontalAlignment="Center">
+                <!-- 首次使用：只需粘贴 API Key -->
+                <Border IsVisible="{Binding AssistantService.Settings.IsApiKeyMissing}"
+                        Padding="16" CornerRadius="12"
+                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                    <StackPanel Spacing="10">
+                        <TextBlock FontWeight="SemiBold" TextWrapping="Wrap">
+                            <Run Text="连接" />
+                            <Run Text="{Binding AssistantService.Settings.Template.Name}" />
+                            <Run Text="：粘贴 API Key 即可开始" />
+                        </TextBlock>
+                        <TextBox x:Name="TextBoxApiKey" PasswordChar="•" Watermark="sk-..." />
+                        <Grid ColumnDefinitions="*,Auto,Auto">
+                            <HyperlinkButton Grid.Column="0" Padding="0" Content="还没有？获取 API Key"
+                                             Click="ButtonGetApiKey_OnClick" />
+                            <Button Grid.Column="1" Margin="0 0 6 0" Content="更换服务商…"
+                                    Click="ButtonSettings_OnClick" />
+                            <Button Grid.Column="2" Classes="accent" Content="保存并开始"
+                                    Click="ButtonSaveApiKey_OnClick" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+                <WrapPanel HorizontalAlignment="Center"
+                           IsVisible="{Binding !AssistantService.Settings.IsApiKeyMissing}">
                     <Button Classes="suggestion" Content="现在上什么课？" Click="ButtonSuggestion_OnClick" />
                     <Button Classes="suggestion" Content="今天的课表" Click="ButtonSuggestion_OnClick" />
                     <Button Classes="suggestion" Content="今天天气怎么样？" Click="ButtonSuggestion_OnClick" />
