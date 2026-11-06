@@ -284,7 +284,9 @@
                                       ci:MainWindowStylesAssist.CornerRadius="{Binding ViewModel.Settings.RadiusX}"
                                       ci:MainWindowStylesAssist.BackgroundOpacity="{Binding ViewModel.Settings.Opacity}"
                                       ci:MainWindowStylesAssist.BackgroundCorlor="{Binding ViewModel.Settings.BackgroundColor}"
-                                      ci:MainWindowStylesAssist.IsCustomBackgroundColorEnabled="{Binding ViewModel.Settings.IsCustomBackgroundColorEnabled}">
+                                      ci:MainWindowStylesAssist.IsCustomBackgroundColorEnabled="{Binding ViewModel.Settings.IsCustomBackgroundColorEnabled}"
+                                      ci:MainWindowStylesAssist.IsBackgroundImageEnabled="{Binding BackgroundImageService.IsActive}"
+                                      ci:MainWindowStylesAssist.BackgroundImageBrush="{Binding BackgroundImageService.Brush}">
                                     <Classes.BasicHidingMode>
                                         <Binding Path="ViewModel.Settings.HideMode"
                                                  Converter="{x:Static ObjectConverters.Equal}">

@@ -52,6 +52,24 @@ public class MainWindowStylesAssist
     public static void SetIsCustomBackgroundColorEnabled(Control obj, bool value) => obj.SetValue(IsCustomBackgroundColorEnabledProperty, value);
     public static bool GetIsCustomBackgroundColorEnabled(Control obj) => obj.GetValue(IsCustomBackgroundColorEnabledProperty);
 
+    public static readonly AttachedProperty<bool> IsBackgroundImageEnabledProperty =
+        AvaloniaProperty.RegisterAttached<MainWindowStylesAssist, Control, bool>("IsBackgroundImageEnabled", inherits: true);
+
+    /// <summary>
+    /// 设置是否启用背景图片。
+    /// </summary>
+    public static void SetIsBackgroundImageEnabled(Control obj, bool value) => obj.SetValue(IsBackgroundImageEnabledProperty, value);
+    public static bool GetIsBackgroundImageEnabled(Control obj) => obj.GetValue(IsBackgroundImageEnabledProperty);
+
+    public static readonly AttachedProperty<IBrush?> BackgroundImageBrushProperty =
+        AvaloniaProperty.RegisterAttached<MainWindowStylesAssist, Control, IBrush?>("BackgroundImageBrush", inherits: true);
+
+    /// <summary>
+    /// 设置背景图片画刷。
+    /// </summary>
+    public static void SetBackgroundImageBrush(Control obj, IBrush? value) => obj.SetValue(BackgroundImageBrushProperty, value);
+    public static IBrush? GetBackgroundImageBrush(Control obj) => obj.GetValue(BackgroundImageBrushProperty);
+
     public static readonly AttachedProperty<bool> MainWindowInEditModeProperty =
         AvaloniaProperty.RegisterAttached<MainWindowStylesAssist, Control, bool>("MainWindowInEditMode", inherits: true);
 

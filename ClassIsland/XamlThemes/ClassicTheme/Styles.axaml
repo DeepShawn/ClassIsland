@@ -216,6 +216,10 @@
         <Style Selector="^[(ci|MainWindowStylesAssist.IsCustomBackgroundColorEnabled)=True] /template/ Border.background">
             <Setter Property="Background" Value="{Binding ViewModel.Settings.BackgroundColor, Converter={StaticResource ColorToColorPickerBrushConverter}, RelativeSource={RelativeSource AncestorType=classIsland:MainWindow}}"/>
         </Style>
+        <!-- 背景图片（优先于背景颜色） -->
+        <Style Selector="^[(ci|MainWindowStylesAssist.IsBackgroundImageEnabled)=True] /template/ Border.background">
+            <Setter Property="Background" Value="{Binding BackgroundImageService.Brush, RelativeSource={RelativeSource AncestorType=classIsland:MainWindow}}"/>
+        </Style>
         <Style Selector="^[IsNotificationEnabled=False]">
             <Setter Property="Template" Value="{StaticResource MainWindowLineMinControlTemplate}"/>
             <!-- <Setter Property="IsVisible" Value="{Binding IsAllComponentsHid, RelativeSource={RelativeSource Self}, Converter={StaticResource InvertBooleanConverter}}"/> -->

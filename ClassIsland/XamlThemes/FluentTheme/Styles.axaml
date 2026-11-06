@@ -54,6 +54,11 @@
         </Style.Resources>
         <Setter Property="Background" Value="{Binding $self.(ci:MainWindowStylesAssist.BackgroundColor), Converter={StaticResource ColorToColorPickerBrushConverter}}"/>
     </Style>
+    <!-- 背景图片（优先于背景颜色） -->
+    <Style Selector="controls|MainWindowLine Border[(ci|MainWindowStylesAssist.IsBackgroundImageEnabled)=True].line-background">
+        <Setter Property="Background" Value="{Binding $self.(ci:MainWindowStylesAssist.BackgroundImageBrush)}"/>
+        <Setter Property="ClipToBounds" Value="True"/>
+    </Style>
     
     <Style Selector="controls|MainWindowLine">
         <Style.Resources>

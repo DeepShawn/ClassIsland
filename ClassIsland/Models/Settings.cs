@@ -217,6 +217,10 @@ public class Settings : ObservableRecipient, ILessonControlSettings, INotificati
     private string _selectedUpdateChannelV2 = "stable";
     private GptSoVitsSpeechSettings _gptSoVitsSpeechSettings = new();
     private ClassIsland.Models.Assistant.AssistantSettings _assistantSettings = new();
+    private bool _isBackgroundImageEnabled = false;
+    private string _backgroundImagePath = "";
+    private int _backgroundImageStretch = 0;
+    private bool _isBackgroundImageAppliedToAssistant = true;
     private double _mainWindowLineVerticalMargin = 5;
     private ObservableCollection<Guid> _trustedProfileIds = [];
     private bool _isNonExactCountdownEnabled = false;
@@ -1600,6 +1604,62 @@ public class Settings : ObservableRecipient, ILessonControlSettings, INotificati
         {
             if (value == _notificationSpeechCustomSmgTokenSource) return;
             _notificationSpeechCustomSmgTokenSource = value;
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>
+    /// 是否启用主界面背景图片。
+    /// </summary>
+    public bool IsBackgroundImageEnabled
+    {
+        get => _isBackgroundImageEnabled;
+        set
+        {
+            if (value == _isBackgroundImageEnabled) return;
+            _isBackgroundImageEnabled = value;
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>
+    /// 当前背景图片路径（位于背景图片库中）。
+    /// </summary>
+    public string BackgroundImagePath
+    {
+        get => _backgroundImagePath;
+        set
+        {
+            if (value == _backgroundImagePath) return;
+            _backgroundImagePath = value;
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>
+    /// 背景图片填充方式：0 填充（裁剪），1 拉伸，2 适应，3 平铺。
+    /// </summary>
+    public int BackgroundImageStretch
+    {
+        get => _backgroundImageStretch;
+        set
+        {
+            if (value == _backgroundImageStretch) return;
+            _backgroundImageStretch = value;
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>
+    /// 是否将背景图片同时应用到 AI 助手窗口。
+    /// </summary>
+    public bool IsBackgroundImageAppliedToAssistant
+    {
+        get => _isBackgroundImageAppliedToAssistant;
+        set
+        {
+            if (value == _isBackgroundImageAppliedToAssistant) return;
+            _isBackgroundImageAppliedToAssistant = value;
             OnPropertyChanged();
         }
     }

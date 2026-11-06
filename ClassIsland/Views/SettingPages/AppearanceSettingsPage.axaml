@@ -13,6 +13,7 @@
       xmlns:classIsland="clr-namespace:ClassIsland"
       xmlns:system="clr-namespace:System;assembly=System.Runtime"
       xmlns:ci="http://classisland.tech/schemas/xaml/core"
+      xmlns:services="clr-namespace:ClassIsland.Services"
       mc:Ignorable="d" 
       d:DesignHeight="450" d:DesignWidth="800"
       d:DataContext="{d:DesignInstance local:AppearanceSettingsPage}">
@@ -57,6 +58,103 @@
                 </controls2:SettingsExpander.Footer>
             </controls2:SettingsExpander>
             
+            <!-- 背景图片 -->
+            <controls2:SettingsExpander IconSource="{controls1:FluentIconSource &#xE9B2;}"
+                                        Header="背景图片"
+                                        Description="使用图片作为主界面背景。可导入自己的图片，导入的图片会保存在背景图片库中。启用后优先于背景颜色。"
+                                        Loaded="ExpanderBackgroundImage_OnLoaded">
+                <controls2:SettingsExpander.Footer>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Button Click="ButtonImportBackgroundImage_OnClick">
+                            <controls1:IconText Glyph="&#xE9B4;" Text="导入图片…" />
+                        </Button>
+                        <ToggleSwitch VerticalAlignment="Center"
+                                      IsEnabled="{Binding !!BackgroundImageService.Library.Count}"
+                                      IsChecked="{Binding ViewModel.SettingsService.Settings.IsBackgroundImageEnabled}" />
+                    </StackPanel>
+                </controls2:SettingsExpander.Footer>
+                <!-- 图片库 -->
+                <controls2:SettingsExpanderItem>
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="背景图片库（点击图片使用）"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Text="还没有图片，点击右上角【导入图片…】添加。支持 PNG、JPG、WebP、BMP、GIF。"
+                                   TextWrapping="Wrap"
+                                   IsVisible="{Binding !BackgroundImageService.Library.Count}" />
+                        <ItemsControl ItemsSource="{Binding BackgroundImageService.Library}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="services:BackgroundImageItem">
+                                    <Panel Margin="0 0 8 8">
+                                    <Button Padding="0" Width="144" Height="81"
+                                            CornerRadius="6" ClipToBounds="True"
+                                            ToolTip.Tip="{Binding FileName}"
+                                            Click="ButtonBackgroundImageItem_OnClick">
+                                        <Button.ContextMenu>
+                                            <ContextMenu>
+                                                <MenuItem Header="使用此图片" Click="MenuItemApplyBackgroundImage_OnClick" />
+                                                <MenuItem Header="删除" Click="MenuItemDeleteBackgroundImage_OnClick" />
+                                            </ContextMenu>
+                                        </Button.ContextMenu>
+                                        <Panel>
+                                            <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
+                                            <Border BorderThickness="3" CornerRadius="6"
+                                                    BorderBrush="{DynamicResource AccentFillColorDefaultBrush}"
+                                                    IsVisible="{Binding IsSelected}" />
+                                            <Border IsVisible="{Binding IsSelected}"
+                                                    HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6"
+                                                    Width="20" Height="20" CornerRadius="10"
+                                                    Background="{DynamicResource AccentFillColorDefaultBrush}">
+                                                <controls1:FluentIcon Glyph="&#xE425;" FontSize="14"
+                                                                      HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                      Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
+                                            </Border>
+                                        </Panel>
+                                    </Button>
+                                    <!-- 删除按钮（触屏友好，无需右键） -->
+                                    <Button HorizontalAlignment="Left" VerticalAlignment="Top" Margin="4"
+                                            Width="24" Height="24" Padding="0" CornerRadius="12"
+                                            Background="#99000000" BorderThickness="0"
+                                            ToolTip.Tip="删除此图片"
+                                            Click="MenuItemDeleteBackgroundImage_OnClick">
+                                        <controls1:FluentIcon Glyph="&#xE671;" FontSize="12" Foreground="White"
+                                                              HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Button>
+                                    </Panel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </controls2:SettingsExpanderItem>
+                <controls2:SettingsExpanderItem Content="填充方式">
+                    <controls2:SettingsExpanderItem.Footer>
+                        <ComboBox MinWidth="160"
+                                  SelectedIndex="{Binding ViewModel.SettingsService.Settings.BackgroundImageStretch}">
+                            <ComboBoxItem Content="填充（裁剪）" />
+                            <ComboBoxItem Content="拉伸" />
+                            <ComboBoxItem Content="适应" />
+                            <ComboBoxItem Content="平铺" />
+                        </ComboBox>
+                    </controls2:SettingsExpanderItem.Footer>
+                </controls2:SettingsExpanderItem>
+                <controls2:SettingsExpanderItem Content="同时应用到 AI 助手窗口">
+                    <controls2:SettingsExpanderItem.Footer>
+                        <ToggleSwitch IsChecked="{Binding ViewModel.SettingsService.Settings.IsBackgroundImageAppliedToAssistant}" />
+                    </controls2:SettingsExpanderItem.Footer>
+                </controls2:SettingsExpanderItem>
+                <controls2:SettingsExpanderItem Content="打开背景图片库文件夹">
+                    <controls2:SettingsExpanderItem.Footer>
+                        <Button Click="ButtonOpenBackgroundFolder_OnClick">
+                            <controls1:IconText Glyph="&#xE88D;" Text="打开" />
+                        </Button>
+                    </controls2:SettingsExpanderItem.Footer>
+                </controls2:SettingsExpanderItem>
+            </controls2:SettingsExpander>
+
             <!-- 背景不透明度 -->
             <controls2:SettingsExpander IconSource="{controls1:FluentIconSource &#xF37D;}"
                                         Header="背景不透明度"

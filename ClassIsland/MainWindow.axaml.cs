@@ -151,6 +151,8 @@ public partial class MainWindow : Window, ITopmostEffectPlayer
     public TopmostEffectWindow TopmostEffectWindow { get; }
     
     public IXamlThemeService XamlThemeService { get; }
+
+    public BackgroundImageService BackgroundImageService { get; } = IAppHost.GetService<BackgroundImageService>();
     private ITutorialService TutorialService { get; }
 
     public event EventHandler<MousePosChangedEventArgs>? MousePosChanged;

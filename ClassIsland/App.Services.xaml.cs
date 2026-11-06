@@ -103,6 +103,7 @@ public partial class App
         services.AddSingleton<IRefreshingService, RefreshingService>();
         // AI 助手 / 语音助手 / 桌面操作
         services.AddSingleton<DesktopOperationService>();
+        services.AddSingleton<BackgroundImageService>();
         services.AddSingleton<AssistantService>();
         services.AddSingleton<VoiceAssistantService>();
         // ViewModels

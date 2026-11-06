@@ -87,6 +87,13 @@
     </ci:MyWindow.Styles>
 
     <Grid RowDefinitions="Auto,*,Auto">
+        <!-- 背景图片 -->
+        <Image Grid.Row="0" Grid.RowSpan="3"
+               Source="{Binding BackgroundImageService.Bitmap}"
+               Stretch="UniformToFill"
+               Opacity="0.35"
+               IsHitTestVisible="False"
+               IsVisible="{Binding BackgroundImageService.IsActiveForAssistant}" />
         <!-- 标题栏 -->
         <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="16 12 12 8">
             <Border Grid.Column="0" Width="36" Height="36" CornerRadius="18"

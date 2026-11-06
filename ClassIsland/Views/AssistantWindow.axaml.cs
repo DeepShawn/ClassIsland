@@ -20,6 +20,9 @@ public partial class AssistantWindow : MyWindow
 
     public VoiceAssistantService VoiceAssistantService { get; }
 
+    public ClassIsland.Services.BackgroundImageService BackgroundImageService { get; } =
+        App.GetService<ClassIsland.Services.BackgroundImageService>();
+
     private bool _isOpened;
     private bool _stickToBottom = true;
 
