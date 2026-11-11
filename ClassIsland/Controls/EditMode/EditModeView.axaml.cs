@@ -20,6 +20,7 @@ using ClassIsland.Core.Helpers.UI;
 using ClassIsland.Core.Models.Components;
 using ClassIsland.Core.Models.UI;
 using ClassIsland.Core.Services.Registry;
+using ClassIsland.Helpers;
 using ClassIsland.Services;
 using ClassIsland.Shared;
 using ClassIsland.Shared.Helpers;
@@ -131,7 +132,9 @@ public partial class EditModeView : UserControl
         ViewModel.TargetComponentsList = target;
         // 重载组件库列表项目，修复切换视图后无法拖拽的问题。
         ViewModel.ComponentGroups = [];
-        ViewModel.ComponentGroups = ComponentRegistryService.GetGroupedSortedComponents();
+        ViewModel.ComponentGroups = LiteModeHelper.FilterComponentGroups(
+            ComponentRegistryService.GetGroupedSortedComponents(),
+            IAppHost.GetService<SettingsService>().Settings.IsLiteModeEnabled);
         ViewModel.TutorialService.PushToNextSentenceByTag("classisland.mainwindow.editMode.componentsLib.open");
     }
     

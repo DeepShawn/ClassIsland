@@ -51,6 +51,13 @@
             </ItemsControl>
 
             <controls1:IconText Glyph="&#xE84F;" Text="行为" Margin="0 0 0 4" />
+            <controls3:SettingsExpander IconSource="{ci:FluentIconSource &#xE751;}"
+                                        Header="精简模式"
+                                        Description="只保留课表、天气与 AI 助手，隐藏其余功能并停止自动检查更新。关闭后需重新打开设置窗口生效。">
+                <controls3:SettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding ViewModel.SettingsService.Settings.IsLiteModeEnabled}"/>
+                </controls3:SettingsExpander.Footer>
+            </controls3:SettingsExpander>
             <!-- 开机自启 -->
             <controls3:SettingsExpander IconSource="{ci:FluentIconSource &#xE342;}" 
                                         Header="开机自启"

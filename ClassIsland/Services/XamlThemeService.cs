@@ -81,6 +81,7 @@ public class XamlThemeService : ObservableRecipient, IXamlThemeService
         if (EnabledThemes.Count == 0)
         {
             EnabledThemes.Add("classisland.fluent");
+            EnabledThemes.Add(GlassThemeId);
         }
         EnabledThemes.CollectionChanged +=
             (_, _) => ConfigureFileHelper.SaveConfig(EnabledThemesPath, EnabledThemes);
@@ -94,8 +95,17 @@ public class XamlThemeService : ObservableRecipient, IXamlThemeService
         //LoadThemeSource();
     }
 
+    private const string GlassThemeId = "classisland.glass";
+
     public void LoadAllThemes()
     {
+        // 已有配置的用户升级后也默认启用液体玻璃主题，只执行一次，之后尊重用户的选择。
+        if (!SettingsService.Settings.IsGlassThemeMigrated)
+        {
+            if (!EnabledThemes.Contains(GlassThemeId))
+                EnabledThemes.Add(GlassThemeId);
+            SettingsService.Settings.IsGlassThemeMigrated = true;
+        }
         LoadThemeSource();
 
         if (App.ApplicationCommand.Safe)
