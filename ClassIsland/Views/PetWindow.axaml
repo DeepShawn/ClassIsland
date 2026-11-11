@@ -1,0 +1,80 @@
+<Window x:Class="ClassIsland.Views.PetWindow"
+        xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:ClassIsland.Views"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance local:PetWindow}"
+        Title="大肥鱼"
+        Topmost="True"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        CanResize="False"
+        SystemDecorations="None"
+        Background="Transparent"
+        TransparencyLevelHint="Transparent"
+        SizeToContent="WidthAndHeight">
+    <Window.Styles>
+        <!-- 液体玻璃气泡：半透明底色 + 顶部高光 + 细描边，不使用实时模糊，低配电脑上也几乎没有额外开销。 -->
+        <Style Selector="Border#Bubble">
+            <Setter Property="Background">
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                    <GradientStop Offset="0" Color="#E6FFFFFF" />
+                    <GradientStop Offset="0.55" Color="#C8F2F7FF" />
+                    <GradientStop Offset="1" Color="#B8DDE9FF" />
+                </LinearGradientBrush>
+            </Setter>
+            <Setter Property="BorderBrush">
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                    <GradientStop Offset="0" Color="#FFFFFFFF" />
+                    <GradientStop Offset="1" Color="#6683A8E6" />
+                </LinearGradientBrush>
+            </Setter>
+        </Style>
+        <Style Selector="Image#Sprite">
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.45" Easing="SineEaseInOut" />
+                </Transitions>
+            </Setter>
+        </Style>
+    </Window.Styles>
+
+    <StackPanel x:Name="RootPanel" Spacing="2" Background="Transparent" Margin="4"
+                PointerPressed="Root_OnPointerPressed"
+                PointerMoved="Root_OnPointerMoved"
+                PointerReleased="Root_OnPointerReleased">
+        <StackPanel.ContextMenu>
+            <ContextMenu>
+                <MenuItem Header="和大肥鱼聊天…" Click="MenuItemChat_OnClick" />
+                <MenuItem Header="停止当前任务" Click="MenuItemStop_OnClick" IsVisible="{Binding AssistantService.IsBusy}" />
+                <Separator />
+                <MenuItem Header="助手设置…" Click="MenuItemSettings_OnClick" />
+                <MenuItem Header="隐藏桌宠" Click="MenuItemHide_OnClick" />
+            </ContextMenu>
+        </StackPanel.ContextMenu>
+
+        <Border x:Name="Bubble"
+                IsVisible="False"
+                HorizontalAlignment="Center"
+                MaxWidth="260"
+                Padding="12 8"
+                CornerRadius="16"
+                BorderThickness="1"
+                BoxShadow="0 4 14 0 #33264A7A">
+            <TextBlock x:Name="BubbleText"
+                       TextWrapping="Wrap"
+                       MaxLines="6"
+                       TextTrimming="CharacterEllipsis"
+                       FontSize="13"
+                       Foreground="#FF1D2B45" />
+        </Border>
+
+        <Image x:Name="Sprite"
+               HorizontalAlignment="Center"
+               Stretch="Uniform"
+               RenderOptions.BitmapInterpolationMode="MediumQuality"
+               RenderTransformOrigin="50%,100%" />
+    </StackPanel>
+</Window>

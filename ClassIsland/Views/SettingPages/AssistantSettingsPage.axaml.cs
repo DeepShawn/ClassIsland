@@ -77,6 +77,31 @@ public partial class AssistantSettingsPage : SettingsPageBase
         TestResult = "";
     }
 
+    private void ButtonDshLogin_OnClick(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            AssistantService.OpenDshWeb();
+            TestResult = "已启动 DSH 网页版，请在浏览器中登录 DeepSeek 账号。";
+        }
+        catch (Exception ex)
+        {
+            TestResult = "✗ 无法启动 DSH：" + ex.Message;
+        }
+    }
+
+    private async void ButtonDshReconnect_OnClick(object? sender, RoutedEventArgs e)
+    {
+        await AssistantService.ResetDshAsync();
+        ButtonTest_OnClick(sender, e);
+    }
+
+    private void ButtonResetPetPosition_OnClick(object? sender, RoutedEventArgs e)
+    {
+        Settings.PetPositionX = -1;
+        Settings.PetPositionY = -1;
+    }
+
     private void ButtonGetApiKey_OnClick(object? sender, RoutedEventArgs e)
     {
         var url = Settings.Template.ApiKeyUrl;

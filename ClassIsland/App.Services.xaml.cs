@@ -157,6 +157,7 @@ public partial class App
         services.AddTransient<TutorialEditorWindow>();
         services.AddSingleton<TutorialCenterWindow>();
         services.AddSingleton<AssistantWindow>();
+        services.AddSingleton<PetWindow>();
         services.AddTransient<TutorialControllerWindow>();
         services.AddTransient<ISplashProvider, SplashWindow>();
         // 设置页面分组

@@ -12,6 +12,7 @@ using ClassIsland.Core.Abstractions.Services;
 using ClassIsland.Core.Abstractions.Services.SpeechService;
 using ClassIsland.Models.Actions;
 using ClassIsland.Models.Assistant;
+using ClassIsland.Services.Assistant.Dsh;
 using ClassIsland.Shared;
 using ClassIsland.Shared.Enums;
 using ClassIsland.Shared.Models.Automation;
@@ -48,6 +49,19 @@ public partial class AssistantChatMessage : ObservableObject
 }
 
 /// <summary>
+/// 助手当前在做什么，桌面宠物据此切换动作。
+/// </summary>
+public enum AssistantActivity
+{
+    Idle,
+    Listening,
+    Thinking,
+    Working,
+    Replying,
+    Error
+}
+
+/// <summary>
 /// 一个可被 AI 调用的工具。
 /// </summary>
 /// <param name="Name">函数名</param>
@@ -67,9 +81,16 @@ public record AssistantTool(
 /// <summary>
 /// AI 助手服务：管理会话、调用模型并执行工具（桌面操作、课表查询、提醒等）。
 /// </summary>
-public partial class AssistantService : ObservableObject
+public partial class AssistantService : ObservableObject, IAsyncDisposable
 {
     private const int MaxToolRounds = 8;
+
+    /// <summary>只提供给内置 API 后端的联网工具（DSH 自带同类工具）。</summary>
+    private static readonly HashSet<string> WebToolNames = ["web_search", "web_fetch"];
+
+    /// <summary>不属于桌面操作的 ClassIsland 工具，关闭桌面操作时仍提供给 DSH。</summary>
+    private static readonly HashSet<string> ClassIslandToolNames =
+        ["get_today_schedule", "get_current_status", "get_weather", "show_notification", "speak", "set_main_window_visible", "open_settings"];
 
     private SettingsService SettingsService { get; }
     private DesktopOperationService Desktop { get; }
@@ -96,6 +117,19 @@ public partial class AssistantService : ObservableObject
     public IReadOnlyList<AssistantTool> Tools { get; }
 
     [ObservableProperty] private bool _isBusy;
+
+    /// <summary>助手当前活动，供桌面宠物显示。</summary>
+    [ObservableProperty] private AssistantActivity _activity = AssistantActivity.Idle;
+
+    /// <summary>最近一条完整回复，供桌面宠物气泡显示。</summary>
+    [ObservableProperty] private string _lastReply = "";
+
+    private readonly SemaphoreSlim _dshLock = new(1, 1);
+    private AcpClient? _acp;
+    private string? _dshSessionId;
+    private bool _dshSessionPrimed;
+    private ClassIslandMcpServer? _mcpServer;
+    private System.Diagnostics.Process? _dshWebProcess;
 
     /// <summary>
     /// 高风险操作确认回调。返回 true 表示允许。未设置时高风险操作将被拒绝（除非关闭了确认）。
@@ -124,6 +158,7 @@ public partial class AssistantService : ObservableObject
         Logger = logger;
         Tools = BuildTools();
 
+        MigrateSettings();
         AttachSettings();
         SettingsService.Settings.PropertyChanged += (_, e) =>
         {
@@ -142,8 +177,28 @@ public partial class AssistantService : ObservableObject
         _attachedSettings.PropertyChanged += OnAssistantSettingsChanged;
     }
 
-    private void OnAssistantSettingsChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) =>
+    private void OnAssistantSettingsChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
         SettingsService.SaveSettings("AssistantSettings." + e.PropertyName);
+        if (e.PropertyName is nameof(AssistantSettings.Backend) or nameof(AssistantSettings.DshCommand)
+            or nameof(AssistantSettings.DshWorkingDirectory) or nameof(AssistantSettings.IsDshClassIslandToolsEnabled)
+            or nameof(AssistantSettings.IsDshApiKeyPassThroughEnabled) or nameof(AssistantSettings.IsDesktopToolsEnabled)
+            or nameof(AssistantSettings.IsCommandToolEnabled))
+        {
+            _ = ResetDshAsync();
+        }
+    }
+
+    private void MigrateSettings()
+    {
+        var settings = SettingsService.Settings.AssistantSettings;
+        if (settings.MigrationVersion < 1)
+        {
+            if (settings.WakeWord == AssistantSettings.LegacyDefaultWakeWord)
+                settings.WakeWord = AssistantSettings.DefaultWakeWord;
+            settings.MigrationVersion = 1;
+        }
+    }
 
     public void RequestShowWindow() => ShowWindowRequested?.Invoke(this, EventArgs.Empty);
 
@@ -155,6 +210,9 @@ public partial class AssistantService : ObservableObject
         Cancel();
         _history.Clear();
         Messages.Clear();
+        // DSH 的上下文保存在会话里，换一个新会话才能真正清空。
+        _dshSessionId = null;
+        _dshSessionPrimed = false;
     }
 
     /// <summary>
@@ -168,8 +226,21 @@ public partial class AssistantService : ObservableObject
     /// <summary>
     /// 测试连接。
     /// </summary>
-    public Task<string> TestConnectionAsync(CancellationToken cancellationToken = default) =>
-        Client.TestAsync(Settings, cancellationToken);
+    public async Task<string> TestConnectionAsync(CancellationToken cancellationToken = default)
+    {
+        if (!Settings.IsDshBackend)
+            return await Client.TestAsync(Settings, cancellationToken);
+        await _dshLock.WaitAsync(cancellationToken);
+        try
+        {
+            await EnsureDshSessionAsync(cancellationToken);
+        }
+        finally
+        {
+            _dshLock.Release();
+        }
+        return "已连接到 DeepSeek Harness（DSH）。";
+    }
 
     /// <summary>
     /// 向助手发送一条消息，并返回最终回复文本。
@@ -198,58 +269,25 @@ public partial class AssistantService : ObservableObject
         var finalText = "";
         try
         {
-            var tools = Settings.IsDesktopToolsEnabled ? BuildToolsJson() : null;
-            for (var round = 0; round < MaxToolRounds; round++)
+            await RunOnUiAsync(() =>
             {
-                var uiMessage = AddMessage(AssistantMessageRole.Assistant, "", true);
-                var messages = new List<JsonNode> { new JsonObject { ["role"] = "system", ["content"] = BuildSystemPrompt() } };
-                messages.AddRange(_history);
-
-                var result = await Client.CompleteStreamingAsync(Settings, messages, tools,
-                    delta => Dispatcher.UIThread.Post(() => uiMessage.Text += delta), cts.Token);
-
-                await RunOnUiAsync(() =>
-                {
-                    uiMessage.Text = result.Content;
-                    uiMessage.IsStreaming = false;
-                    if (string.IsNullOrWhiteSpace(result.Content))
-                        Messages.Remove(uiMessage);
-                });
-
-                var assistantNode = new JsonObject
-                {
-                    ["role"] = "assistant",
-                    ["content"] = result.Content
-                };
-                if (result.ToolCalls.Count > 0)
-                {
-                    assistantNode["tool_calls"] = new JsonArray(result.ToolCalls.Select(c => (JsonNode)new JsonObject
-                    {
-                        ["id"] = c.Id,
-                        ["type"] = "function",
-                        ["function"] = new JsonObject { ["name"] = c.Name, ["arguments"] = c.Arguments }
-                    }).ToArray());
-                }
-                _history.Add(assistantNode);
-
-                if (result.ToolCalls.Count == 0)
-                {
-                    finalText = result.Content;
-                    break;
-                }
-
-                foreach (var call in result.ToolCalls)
-                {
-                    var output = await ExecuteToolAsync(call, cts.Token);
-                    _history.Add(new JsonObject
-                    {
-                        ["role"] = "tool",
-                        ["tool_call_id"] = call.Id,
-                        ["content"] = output
-                    });
-                }
+                LastReply = "";
+                Activity = AssistantActivity.Thinking;
+            });
+            if (Settings.IsDshBackend)
+            {
+                finalText = await SendViaDshAsync(text, cts.Token);
+            }
+            else
+            {
+                finalText = await SendViaApiAsync(cts.Token);
             }
 
+            await RunOnUiAsync(() =>
+            {
+                LastReply = finalText;
+                Activity = AssistantActivity.Idle;
+            });
             if (Settings.IsSpeakReplyEnabled && !string.IsNullOrWhiteSpace(finalText))
             {
                 try
@@ -274,6 +312,7 @@ public partial class AssistantService : ObservableObject
         {
             Logger.LogError(e, "AI 助手请求失败");
             AddMessage(AssistantMessageRole.Error, e.Message);
+            await RunOnUiAsync(() => Activity = AssistantActivity.Error);
         }
         finally
         {
@@ -283,6 +322,8 @@ public partial class AssistantService : ObservableObject
                 await RunOnUiAsync(() =>
                 {
                     IsBusy = false;
+                    if (Activity != AssistantActivity.Error)
+                        Activity = AssistantActivity.Idle;
                     foreach (var m in Messages.Where(x => x.IsStreaming))
                         m.IsStreaming = false;
                 });
@@ -292,12 +333,71 @@ public partial class AssistantService : ObservableObject
         return finalText;
     }
 
+    /// <summary>
+    /// 通过 OpenAI 兼容接口完成一轮对话（含多轮工具调用）。
+    /// </summary>
+    private async Task<string> SendViaApiAsync(CancellationToken cancellationToken)
+    {
+        var tools = Settings.IsDesktopToolsEnabled ? BuildToolsJson() : null;
+        for (var round = 0; round < MaxToolRounds; round++)
+        {
+            var uiMessage = AddMessage(AssistantMessageRole.Assistant, "", true);
+            var messages = new List<JsonNode> { new JsonObject { ["role"] = "system", ["content"] = BuildSystemPrompt() } };
+            messages.AddRange(_history);
+
+            var result = await Client.CompleteStreamingAsync(Settings, messages, tools,
+                delta => Dispatcher.UIThread.Post(() =>
+                {
+                    uiMessage.Text += delta;
+                    Activity = AssistantActivity.Replying;
+                }), cancellationToken);
+
+            await RunOnUiAsync(() =>
+            {
+                uiMessage.Text = result.Content;
+                uiMessage.IsStreaming = false;
+                if (string.IsNullOrWhiteSpace(result.Content))
+                    Messages.Remove(uiMessage);
+            });
+
+            var assistantNode = new JsonObject
+            {
+                ["role"] = "assistant",
+                ["content"] = result.Content
+            };
+            if (result.ToolCalls.Count > 0)
+            {
+                assistantNode["tool_calls"] = new JsonArray(result.ToolCalls.Select(c => (JsonNode)new JsonObject
+                {
+                    ["id"] = c.Id,
+                    ["type"] = "function",
+                    ["function"] = new JsonObject { ["name"] = c.Name, ["arguments"] = c.Arguments }
+                }).ToArray());
+            }
+            _history.Add(assistantNode);
+
+            if (result.ToolCalls.Count == 0)
+                return result.Content;
+
+            await RunOnUiAsync(() => Activity = AssistantActivity.Working);
+            foreach (var call in result.ToolCalls)
+            {
+                var output = await ExecuteToolAsync(call, cancellationToken);
+                _history.Add(new JsonObject
+                {
+                    ["role"] = "tool",
+                    ["tool_call_id"] = call.Id,
+                    ["content"] = output
+                });
+            }
+            await RunOnUiAsync(() => Activity = AssistantActivity.Thinking);
+        }
+
+        return "";
+    }
+
     private async Task<string> ExecuteToolAsync(AiToolCall call, CancellationToken cancellationToken)
     {
-        var tool = Tools.FirstOrDefault(x => x.Name == call.Name);
-        if (tool == null)
-            return $"错误：未知工具 {call.Name}";
-
         JsonObject args;
         try
         {
@@ -307,6 +407,17 @@ public partial class AssistantService : ObservableObject
         {
             return "错误：参数不是有效的 JSON。";
         }
+
+        return await InvokeToolAsync(Tools.FirstOrDefault(x => x.Name == call.Name), call.Name, args, cancellationToken);
+    }
+
+    /// <summary>
+    /// 执行一个工具：在对话中显示进度，高风险操作先请求确认。
+    /// </summary>
+    private async Task<string> InvokeToolAsync(AssistantTool? tool, string name, JsonObject args, CancellationToken cancellationToken)
+    {
+        if (tool == null)
+            return $"错误：未知工具 {name}";
 
         var argText = args.Count == 0 ? "" : " " + args.ToJsonString(new JsonSerializerOptions
         {
@@ -334,7 +445,7 @@ public partial class AssistantService : ObservableObject
 
         try
         {
-            Logger.LogInformation("执行 AI 工具 {}：{}", tool.Name, call.Arguments);
+            Logger.LogInformation("执行 AI 工具 {}：{}", tool.Name, argText);
             var output = await tool.Handler(args, cancellationToken);
             await RunOnUiAsync(() =>
             {
@@ -366,6 +477,8 @@ public partial class AssistantService : ObservableObject
         sb.AppendLine($"操作系统：{System.Runtime.InteropServices.RuntimeInformation.OSDescription}。");
         if (!Settings.IsDesktopToolsEnabled)
             sb.AppendLine("注意：用户已关闭工具调用功能，你无法操作电脑，只能进行对话。");
+        else if (Settings.IsWebToolsEnabled)
+            sb.AppendLine("需要最新信息（新闻、资料、价格等）时，先用 web_search 搜索，再用 web_fetch 打开相关网页阅读，并在回答中注明来源网址。");
         if (!string.IsNullOrWhiteSpace(Settings.CustomSystemPrompt))
         {
             sb.AppendLine();
@@ -415,6 +528,7 @@ public partial class AssistantService : ObservableObject
     {
         return new JsonArray(Tools
             .Where(t => Settings.IsCommandToolEnabled || t.Name != "run_command")
+            .Where(t => Settings.IsWebToolsEnabled || !WebToolNames.Contains(t.Name))
             .Select(t => (JsonNode)new JsonObject
             {
                 ["type"] = "function",
@@ -526,6 +640,17 @@ public partial class AssistantService : ObservableObject
                     IAppHost.GetService<Views.SettingsWindowNew>().Open(string.IsNullOrWhiteSpace(page) ? "general" : page);
                     return "已打开设置。";
                 })),
+
+            // ---------- 联网 ----------
+            new("web_search", "联网搜索",
+                "在互联网上搜索，返回结果的标题、网址和摘要。",
+                Schema(("query", "string", "搜索关键词", true, null),
+                       ("count", "integer", "返回结果数，1-10，默认 6", false, null)),
+                false, (a, ct) => WebTools.SearchAsync(GetString(a, "query"), GetInt(a, "count", 6), ct)),
+            new("web_fetch", "读取网页",
+                "打开一个网址并返回网页的文字内容（过长会截断）。",
+                Schema(("url", "string", "http/https 网址", true, null)),
+                false, (a, ct) => WebTools.FetchAsync(GetString(a, "url"), ct)),
 
             // ---------- 桌面操作 ----------
             new("open", "打开",
@@ -696,6 +821,312 @@ public partial class AssistantService : ObservableObject
             return "暂无天气信息。";
         var json = JsonSerializer.Serialize(new { info.Current, info.Alerts, info.Aqi, info.UpdateTime });
         return json.Length > 3000 ? json[..3000] : json;
+    }
+
+    #endregion
+
+    #region DeepSeek Harness
+
+    /// <summary>
+    /// 提供给 DSH 的工具：ClassIsland 工具总是提供；桌面操作工具受设置控制；联网工具由 DSH 自带，不重复提供。
+    /// </summary>
+    private IEnumerable<AssistantTool> GetDshTools() => Tools
+        .Where(t => !WebToolNames.Contains(t.Name))
+        .Where(t => Settings.IsDesktopToolsEnabled || ClassIslandToolNames.Contains(t.Name))
+        .Where(t => Settings.IsCommandToolEnabled || t.Name != "run_command");
+
+    private Task<string> InvokeToolFromDshAsync(string name, JsonObject args, CancellationToken cancellationToken)
+    {
+        var tool = GetDshTools().FirstOrDefault(t => t.Name == name);
+        return InvokeToolAsync(tool, name, args, cancellationToken);
+    }
+
+    private string GetDshWorkingDirectory()
+    {
+        var dir = Settings.DshWorkingDirectory.Trim();
+        if (string.IsNullOrEmpty(dir) || !System.IO.Directory.Exists(dir))
+            dir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return System.IO.Path.GetFullPath(dir);
+    }
+
+    private Dictionary<string, string> BuildDshEnvironment()
+    {
+        var env = new Dictionary<string, string>();
+        if (Settings.IsDshApiKeyPassThroughEnabled && !string.IsNullOrWhiteSpace(Settings.ApiKey))
+            env["DEEPSEEK_API_KEY"] = Settings.ApiKey.Trim();
+        return env;
+    }
+
+    /// <summary>
+    /// 确保 DSH 进程已启动并且存在可用会话。调用方需持有 <see cref="_dshLock"/>。
+    /// </summary>
+    private async Task<string> EnsureDshSessionAsync(CancellationToken cancellationToken)
+    {
+        if (_acp is not { IsRunning: true })
+        {
+            if (_acp != null)
+                await _acp.DisposeAsync();
+            _dshSessionId = null;
+            var acp = new AcpClient(Logger);
+            acp.SessionUpdate += OnDshSessionUpdate;
+            acp.PermissionHandler = HandleDshPermissionAsync;
+            acp.Exited += (_, _) => _dshSessionId = null;
+            _acp = acp;
+            try
+            {
+                await acp.StartAsync(Settings.DshCommand, GetDshWorkingDirectory(), BuildDshEnvironment(), cancellationToken);
+            }
+            catch (Exception e)
+            {
+                // 握手未完成的进程不能复用，否则下次会被当作已连接。
+                await acp.DisposeAsync();
+                _acp = null;
+                if (cancellationToken.IsCancellationRequested)
+                    throw;
+                var reason = e is OperationCanceledException ? "连接超时" : e.Message;
+                throw new InvalidOperationException(
+                    $"无法连接 DeepSeek Harness（DSH）：{reason}\n请确认已安装 Node.js 18+，并在【设置 → AI 助手】中点击“登录 DSH 账号”完成登录。", e);
+            }
+        }
+
+        if (_dshSessionId != null)
+            return _dshSessionId;
+
+        var mcpServers = new JsonArray();
+        if (Settings.IsDshClassIslandToolsEnabled)
+        {
+            if (_mcpServer == null)
+            {
+                _mcpServer = new ClassIslandMcpServer(Logger, GetDshTools, InvokeToolFromDshAsync);
+                _mcpServer.Start();
+            }
+            mcpServers.Add(_mcpServer.ToAcpDeclaration());
+        }
+
+        _dshSessionId = await _acp.NewSessionAsync(GetDshWorkingDirectory(), mcpServers, cancellationToken);
+        _dshSessionPrimed = false;
+        return _dshSessionId;
+    }
+
+    private string BuildDshContextPrefix()
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("【背景】你正在通过 ClassIsland 的桌面助手（桌宠“大肥鱼”）与用户对话。ClassIsland 是显示课表和天气的桌面软件。");
+        sb.AppendLine("回复会显示在小气泡和小窗口中，也可能被语音朗读，请简短，少用表格。");
+        if (Settings.IsDshClassIslandToolsEnabled)
+            sb.AppendLine("可以使用名为 classisland 的 MCP 工具查询课表、课程状态、天气，显示提醒，打开 ClassIsland 设置或操作电脑。");
+        sb.AppendLine("需要最新资料时请使用联网搜索 / 网页读取工具，并注明来源。");
+        if (!string.IsNullOrWhiteSpace(Settings.CustomSystemPrompt))
+            sb.AppendLine(Settings.CustomSystemPrompt);
+        sb.AppendLine($"当前时间：{DateTime.Now:yyyy-MM-dd HH:mm dddd}。");
+        sb.AppendLine();
+        sb.Append("【用户】");
+        return sb.ToString();
+    }
+
+    private AssistantChatMessage? _dshReplyMessage;
+    private readonly Dictionary<string, AssistantChatMessage> _dshToolMessages = new();
+    private readonly StringBuilder _dshReplyText = new();
+
+    private async Task<string> SendViaDshAsync(string text, CancellationToken cancellationToken)
+    {
+        await _dshLock.WaitAsync(cancellationToken);
+        try
+        {
+            var sessionId = await EnsureDshSessionAsync(cancellationToken);
+            var prompt = _dshSessionPrimed ? text : BuildDshContextPrefix() + text;
+            _dshSessionPrimed = true;
+            await RunOnUiAsync(() =>
+            {
+                _dshReplyMessage = null;
+                _dshReplyText.Clear();
+                _dshToolMessages.Clear();
+            });
+
+            var stopReason = await _acp!.PromptAsync(sessionId, prompt, cancellationToken);
+            Logger.LogInformation("DSH 本轮结束：{}", stopReason);
+
+            var reply = "";
+            await RunOnUiAsync(() =>
+            {
+                reply = _dshReplyText.ToString().Trim();
+                if (_dshReplyMessage != null)
+                {
+                    _dshReplyMessage.IsStreaming = false;
+                    if (string.IsNullOrWhiteSpace(_dshReplyMessage.Text))
+                        Messages.Remove(_dshReplyMessage);
+                }
+                foreach (var m in _dshToolMessages.Values)
+                    m.IsStreaming = false;
+                _dshReplyMessage = null;
+            });
+            if (stopReason == "refusal")
+                AddMessage(AssistantMessageRole.Error, "DSH 拒绝了这个请求。");
+            else if (stopReason is "max_tokens" or "max_turn_requests")
+                AddMessage(AssistantMessageRole.Error, "回复已达到长度或轮次上限，被截断。");
+            return reply;
+        }
+        finally
+        {
+            _dshLock.Release();
+        }
+    }
+
+    private void OnDshSessionUpdate(string sessionId, JsonObject update)
+    {
+        if (sessionId != _dshSessionId)
+            return;
+        var kind = update["sessionUpdate"]?.GetValue<string>();
+        Dispatcher.UIThread.Post(() =>
+        {
+            switch (kind)
+            {
+                case "agent_message_chunk":
+                    var chunk = update["content"]?["text"]?.GetValue<string>() ?? "";
+                    if (chunk.Length == 0)
+                        break;
+                    // 工具调用之后的文字作为新的一条消息显示，保持与工具进度的先后顺序。
+                    if (_dshReplyMessage == null || Messages.LastOrDefault() != _dshReplyMessage)
+                    {
+                        if (_dshReplyMessage != null)
+                            _dshReplyMessage.IsStreaming = false;
+                        _dshReplyMessage = new AssistantChatMessage { Role = AssistantMessageRole.Assistant, IsStreaming = true };
+                        Messages.Add(_dshReplyMessage);
+                        if (_dshReplyText.Length > 0)
+                            _dshReplyText.AppendLine();
+                    }
+                    _dshReplyMessage.Text += chunk;
+                    _dshReplyText.Append(chunk);
+                    Activity = AssistantActivity.Replying;
+                    break;
+                case "agent_thought_chunk":
+                    Activity = AssistantActivity.Thinking;
+                    break;
+                case "tool_call":
+                {
+                    var id = update["toolCallId"]?.ToString() ?? "";
+                    var title = update["title"]?.ToString() ?? "工具";
+                    var message = new AssistantChatMessage
+                    {
+                        Role = AssistantMessageRole.Tool,
+                        Text = "⚙ " + title,
+                        IsStreaming = true
+                    };
+                    _dshToolMessages[id] = message;
+                    Messages.Add(message);
+                    Activity = AssistantActivity.Working;
+                    break;
+                }
+                case "tool_call_update":
+                {
+                    var id = update["toolCallId"]?.ToString() ?? "";
+                    if (!_dshToolMessages.TryGetValue(id, out var message))
+                        break;
+                    if (update["title"]?.ToString() is { Length: > 0 } title)
+                        message.Text = "⚙ " + title;
+                    switch (update["status"]?.ToString())
+                    {
+                        case "completed":
+                            message.Text += "  ✓";
+                            message.IsStreaming = false;
+                            Activity = AssistantActivity.Thinking;
+                            break;
+                        case "failed":
+                            message.Text += "  ✗";
+                            message.IsStreaming = false;
+                            Activity = AssistantActivity.Thinking;
+                            break;
+                    }
+                    break;
+                }
+            }
+        });
+    }
+
+    private async Task<string?> HandleDshPermissionAsync(JsonObject request)
+    {
+        var options = request["options"] as JsonArray ?? [];
+        string? Find(params string[] kinds) => options
+            .OfType<JsonObject>()
+            .FirstOrDefault(o => kinds.Contains(o["kind"]?.ToString()))?["optionId"]?.ToString();
+
+        var allow = Find("allow_once", "allow_always");
+        var reject = Find("reject_once", "reject_always");
+        if (!Settings.ConfirmDangerousOperations)
+            return allow;
+
+        var title = request["toolCall"]?["title"]?.ToString() ?? "执行操作";
+        var allowed = false;
+        if (ConfirmHandler != null)
+            allowed = await Dispatcher.UIThread.InvokeAsync(() => ConfirmHandler($"DSH 请求执行：{title}\n\n是否允许？"));
+        return allowed ? allow : reject;
+    }
+
+    /// <summary>
+    /// 关闭当前 DSH 进程与会话，下次提问时按新设置重新连接。
+    /// </summary>
+    public async Task ResetDshAsync()
+    {
+        await _dshLock.WaitAsync();
+        try
+        {
+            _dshSessionId = null;
+            _dshSessionPrimed = false;
+            if (_acp != null)
+            {
+                await _acp.DisposeAsync();
+                _acp = null;
+            }
+            _mcpServer?.Dispose();
+            _mcpServer = null;
+        }
+        finally
+        {
+            _dshLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// 启动 DSH 网页版。DSH 会在浏览器中打开，可在其中登录 DeepSeek 账号；登录信息保存在 DSH 本地，与助手共用。
+    /// </summary>
+    public void OpenDshWeb()
+    {
+        if (_dshWebProcess is { HasExited: false })
+        {
+            Desktop.Open("http://127.0.0.1:3080", "");
+            return;
+        }
+        var command = Settings.DshCommand.Trim() + " web";
+        var psi = OperatingSystem.IsWindows()
+            ? new System.Diagnostics.ProcessStartInfo("cmd.exe") { ArgumentList = { "/d", "/s", "/c", command } }
+            : new System.Diagnostics.ProcessStartInfo("/bin/sh") { ArgumentList = { "-c", command } };
+        psi.UseShellExecute = false;
+        psi.CreateNoWindow = true;
+        psi.WorkingDirectory = GetDshWorkingDirectory();
+        foreach (var (key, value) in BuildDshEnvironment())
+            psi.Environment[key] = value;
+        Logger.LogInformation("启动 DSH 网页版：{}", command);
+        _dshWebProcess = System.Diagnostics.Process.Start(psi);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        // 退出时可能有提问正在进行并持有锁，这里不等锁，直接结束子进程。
+        _currentCts?.Cancel();
+        if (_acp != null)
+            await _acp.DisposeAsync();
+        _acp = null;
+        _mcpServer?.Dispose();
+        _mcpServer = null;
+        try
+        {
+            if (_dshWebProcess is { HasExited: false })
+                _dshWebProcess.Kill(entireProcessTree: true);
+        }
+        catch (Exception e)
+        {
+            Logger.LogDebug(e, "结束 DSH 网页版失败");
+        }
     }
 
     #endregion

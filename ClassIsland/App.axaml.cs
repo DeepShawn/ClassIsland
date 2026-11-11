@@ -1190,7 +1190,19 @@ public partial class App : AppBase, IAppHost
             var assistant = GetService<AssistantService>();
             assistant.ConfirmHandler = message => GetService<AssistantWindow>().ConfirmAsync(message);
             assistant.ShowWindowRequested += (_, _) => Dispatcher.UIThread.Post(() => GetService<AssistantWindow>().Open());
+            AppStopping += (_, _) =>
+            {
+                try
+                {
+                    assistant.DisposeAsync().AsTask().Wait(TimeSpan.FromSeconds(2));
+                }
+                catch (Exception e)
+                {
+                    Logger?.LogWarning(e, "关闭 AI 助手失败");
+                }
+            };
             GetService<VoiceAssistantService>().Initialize();
+            GetService<PetWindow>().Initialize();
         }
         catch (Exception e)
         {

@@ -169,7 +169,7 @@ public partial class VoiceAssistantService : ObservableObject
     {
         StopWindows();
         var engine = CreateEngine();
-        var wakeWord = string.IsNullOrWhiteSpace(Settings.WakeWord) ? "小岛小岛" : Settings.WakeWord.Trim();
+        var wakeWord = string.IsNullOrWhiteSpace(Settings.WakeWord) ? AssistantSettings.DefaultWakeWord : Settings.WakeWord.Trim();
 
         var wakeGrammar = new Grammar(new GrammarBuilder(wakeWord) { Culture = engine.RecognizerInfo.Culture })
         {
@@ -177,9 +177,13 @@ public partial class VoiceAssistantService : ObservableObject
             Weight = 1.0f,
             Priority = 127
         };
-        var dictation = new DictationGrammar { Name = "dictation", Weight = 0.5f };
+        // 后台只加载唤醒词和通配“垃圾”语法，不加载听写语法：听写会持续进行自由识别，在低配电脑上 CPU 占用明显。
+        // 通配语法用来吸收无关的说话声，减少误唤醒；唤醒后再单独进行一次听写识别指令。
+        var garbageBuilder = new GrammarBuilder { Culture = engine.RecognizerInfo.Culture };
+        garbageBuilder.AppendWildcard();
+        var garbage = new Grammar(garbageBuilder) { Name = "garbage", Weight = 0.2f };
         engine.LoadGrammar(wakeGrammar);
-        engine.LoadGrammar(dictation);
+        engine.LoadGrammar(garbage);
         engine.SpeechRecognized += EngineOnSpeechRecognized;
         engine.RecognizeAsync(RecognizeMode.Multiple);
         _engine = engine;
@@ -244,37 +248,13 @@ public partial class VoiceAssistantService : ObservableObject
     private void EngineOnSpeechRecognized(object? sender, SpeechRecognizedEventArgs e)
     {
         var text = e.Result.Text?.Trim() ?? "";
-        var wakeWord = (Settings.WakeWord ?? "").Trim();
         Logger.LogDebug("语音识别：{} ({:F2}, {})", text, e.Result.Confidence, e.Result.Grammar?.Name);
 
         if (e.Result.Confidence < Settings.RecognitionConfidenceThreshold || text.Length == 0)
             return;
 
-        // 唤醒词
-        if (e.Result.Grammar?.Name == "wake")
-        {
+        if (e.Result.Grammar?.Name == "wake" && !_awaitingCommand)
             OnWake();
-            return;
-        }
-
-        // 唤醒词与指令连在一起说
-        if (!_awaitingCommand && wakeWord.Length > 0 && text.StartsWith(wakeWord, StringComparison.OrdinalIgnoreCase))
-        {
-            var rest = text[wakeWord.Length..].TrimStart(' ', '，', ',', '。');
-            if (rest.Length == 0)
-            {
-                OnWake();
-                return;
-            }
-            _ = HandleCommandAsync(rest);
-            return;
-        }
-
-        if (_awaitingCommand)
-        {
-            _awaitingCommand = false;
-            _ = HandleCommandAsync(text);
-        }
     }
 
     #endregion
@@ -285,17 +265,55 @@ public partial class VoiceAssistantService : ObservableObject
         Dispatcher.UIThread.Post(() =>
         {
             Status = "我在听，请说出指令…";
+            AssistantService.Activity = AssistantActivity.Listening;
             if (Settings.ShowWindowOnWake)
                 AssistantService.RequestShowWindow();
         });
         TrySpeak("我在");
-        // 8 秒内未说出指令则回到待唤醒
-        _ = Task.Delay(TimeSpan.FromSeconds(8)).ContinueWith(_ =>
+        // 不能在识别事件回调中停止识别引擎，因此切到后台线程进行。
+        _ = Task.Run(ListenForCommandAsync);
+    }
+
+    private async Task ListenForCommandAsync()
+    {
+        string? command = null;
+        try
         {
-            if (!_awaitingCommand) return;
+            if (OperatingSystem.IsWindows())
+            {
+                // 等“我在”播完，避免把提示音识别成指令。
+                await Task.Delay(TimeSpan.FromSeconds(0.8));
+                PauseWindows();
+                try
+                {
+                    command = RecognizeOnceWindows();
+                }
+                finally
+                {
+                    ResumeWindows();
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            Logger.LogWarning(e, "识别语音指令失败");
+        }
+        finally
+        {
             _awaitingCommand = false;
-            Dispatcher.UIThread.Post(ResetStatus);
-        });
+        }
+
+        if (string.IsNullOrWhiteSpace(command))
+        {
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (AssistantService.Activity == AssistantActivity.Listening)
+                    AssistantService.Activity = AssistantActivity.Idle;
+                ResetStatus();
+            });
+            return;
+        }
+        await HandleCommandAsync(command.Trim());
     }
 
     private async Task HandleCommandAsync(string text)

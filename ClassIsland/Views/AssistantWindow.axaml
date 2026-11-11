@@ -45,6 +45,31 @@
         <Style Selector="Border.bubble.assistant">
             <Setter Property="CornerRadius" Value="14 14 14 4" />
         </Style>
+        <!-- 玻璃质感：半透明渐变 + 顶部内高光，不使用实时模糊。 -->
+        <Style Selector="Border.bubble.assistant, Border.glass-avatar">
+            <Setter Property="Background">
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                    <GradientStop Offset="0" Color="#33FFFFFF" />
+                    <GradientStop Offset="1" Color="#0FFFFFFF" />
+                </LinearGradientBrush>
+            </Setter>
+            <Setter Property="BorderBrush">
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                    <GradientStop Offset="0" Color="#80FFFFFF" />
+                    <GradientStop Offset="1" Color="#2094A9C9" />
+                </LinearGradientBrush>
+            </Setter>
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BoxShadow" Value="0 2 8 0 #18000000, inset 0 1 0 0 #66FFFFFF" />
+        </Style>
+        <Style Selector="Border.glass-avatar">
+            <Setter Property="Background">
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                    <GradientStop Offset="0" Color="#FFE3EEFF" />
+                    <GradientStop Offset="1" Color="#FFB9D2F5" />
+                </LinearGradientBrush>
+            </Setter>
+        </Style>
         <Style Selector="Border.bubble.tool">
             <Setter Property="Padding" Value="10 4" />
             <Setter Property="CornerRadius" Value="10" />
@@ -96,17 +121,18 @@
                IsVisible="{Binding BackgroundImageService.IsActiveForAssistant}" />
         <!-- 标题栏 -->
         <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="16 12 12 8">
-            <Border Grid.Column="0" Width="36" Height="36" CornerRadius="18"
-                    Background="{DynamicResource AccentFillColorDefaultBrush}">
-                <ci:FluentIcon Glyph="&#xE275;" FontSize="20"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"
-                               Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
+            <Border Grid.Column="0" Width="40" Height="40" CornerRadius="20" ClipToBounds="True"
+                    Classes="glass-avatar">
+                <Image Source="avares://ClassIsland/Assets/Pet/dafeiyu_front.png"
+                       Stretch="UniformToFill" VerticalAlignment="Top"
+                       Width="64" Height="98" Margin="0 -15 0 0"
+                       RenderOptions.BitmapInterpolationMode="MediumQuality" />
             </Border>
             <StackPanel Grid.Column="1" Margin="10 0 0 0" VerticalAlignment="Center">
-                <TextBlock Text="ClassIsland 智能助手" FontWeight="SemiBold" FontSize="15" />
+                <TextBlock Text="大肥鱼 · 智能助手" FontWeight="SemiBold" FontSize="15" />
                 <TextBlock FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                            TextTrimming="CharacterEllipsis">
-                    <Run Text="{Binding AssistantService.Settings.EffectiveModel}" />
+                    <Run Text="{Binding AssistantService.Settings.BackendDisplayName}" />
                     <Run Text=" · " />
                     <Run Text="{Binding VoiceAssistantService.Status}" />
                 </TextBlock>
@@ -163,7 +189,7 @@
                            HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"
                            Margin="0 0 0 16" />
                 <!-- 首次使用：只需粘贴 API Key -->
-                <Border IsVisible="{Binding AssistantService.Settings.IsApiKeyMissing}"
+                <Border IsVisible="{Binding AssistantService.Settings.NeedsApiKeySetup}"
                         Padding="16" CornerRadius="12"
                         Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1">
@@ -185,7 +211,7 @@
                     </StackPanel>
                 </Border>
                 <WrapPanel HorizontalAlignment="Center"
-                           IsVisible="{Binding !AssistantService.Settings.IsApiKeyMissing}">
+                           IsVisible="{Binding !AssistantService.Settings.NeedsApiKeySetup}">
                     <Button Classes="suggestion" Content="现在上什么课？" Click="ButtonSuggestion_OnClick" />
                     <Button Classes="suggestion" Content="今天的课表" Click="ButtonSuggestion_OnClick" />
                     <Button Classes="suggestion" Content="今天天气怎么样？" Click="ButtonSuggestion_OnClick" />
