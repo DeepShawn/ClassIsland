@@ -17,7 +17,7 @@ concurrency:
 
 env:
   PDC_CLIENT_VERSION: 1.0.1.0
-  RELEASE_TAG: 2.1.1.0
+  RELEASE_TAG: 2.1.2.0
 
 jobs:
   build_app:
@@ -109,7 +109,7 @@ jobs:
           - build_type: selfContained
             package: installer
     env:
-      artifact_name: ClassIsland-AI_2.1.1.0_windows_x64_${{ matrix.build_type }}_${{ matrix.package }}
+      artifact_name: ClassIsland-AI_2.1.2.0_windows_x64_${{ matrix.build_type }}_${{ matrix.package }}
     name: Pack_App_windows_x64_${{ matrix.build_type }}_${{ matrix.package }}
     steps:
       - name: Checkout
