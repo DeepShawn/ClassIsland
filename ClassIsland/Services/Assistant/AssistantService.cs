@@ -183,7 +183,7 @@ public partial class AssistantService : ObservableObject, IAsyncDisposable
         if (e.PropertyName is nameof(AssistantSettings.Backend) or nameof(AssistantSettings.DshCommand)
             or nameof(AssistantSettings.DshWorkingDirectory) or nameof(AssistantSettings.IsDshClassIslandToolsEnabled)
             or nameof(AssistantSettings.IsDshApiKeyPassThroughEnabled) or nameof(AssistantSettings.IsDesktopToolsEnabled)
-            or nameof(AssistantSettings.IsCommandToolEnabled))
+            or nameof(AssistantSettings.IsCommandToolEnabled) or nameof(AssistantSettings.IsFullAccessEnabled))
         {
             _ = ResetDshAsync();
         }
@@ -338,7 +338,7 @@ public partial class AssistantService : ObservableObject, IAsyncDisposable
     /// </summary>
     private async Task<string> SendViaApiAsync(CancellationToken cancellationToken)
     {
-        var tools = Settings.IsDesktopToolsEnabled ? BuildToolsJson() : null;
+        var tools = Settings.AllowDesktopTools ? BuildToolsJson() : null;
         for (var round = 0; round < MaxToolRounds; round++)
         {
             var uiMessage = AddMessage(AssistantMessageRole.Assistant, "", true);
@@ -425,7 +425,7 @@ public partial class AssistantService : ObservableObject, IAsyncDisposable
         });
         var uiMessage = AddMessage(AssistantMessageRole.Tool, $"⚙ {tool.DisplayName}{argText}", true);
 
-        if (tool.IsDangerous && Settings.ConfirmDangerousOperations)
+        if (tool.IsDangerous && Settings.RequiresConfirmation)
         {
             var allowed = false;
             if (ConfirmHandler != null)
@@ -475,8 +475,10 @@ public partial class AssistantService : ObservableObject, IAsyncDisposable
         sb.AppendLine("对于关机、重启、结束进程、执行命令等高风险操作，只有在用户明确要求时才调用。");
         sb.AppendLine($"当前时间：{DateTime.Now:yyyy-MM-dd HH:mm dddd}。");
         sb.AppendLine($"操作系统：{System.Runtime.InteropServices.RuntimeInformation.OSDescription}。");
-        if (!Settings.IsDesktopToolsEnabled)
+        if (!Settings.AllowDesktopTools)
             sb.AppendLine("注意：用户已关闭工具调用功能，你无法操作电脑，只能进行对话。");
+        else if (Settings.IsFullAccessEnabled)
+            sb.AppendLine("用户已授予你完全控制电脑的权限：可以直接执行操作和命令，无需再征求同意；但关机、删除文件等不可逆操作仍应只在用户明确要求时进行。");
         else if (Settings.IsWebToolsEnabled)
             sb.AppendLine("需要最新信息（新闻、资料、价格等）时，先用 web_search 搜索，再用 web_fetch 打开相关网页阅读，并在回答中注明来源网址。");
         if (!string.IsNullOrWhiteSpace(Settings.CustomSystemPrompt))
@@ -527,7 +529,7 @@ public partial class AssistantService : ObservableObject, IAsyncDisposable
     private JsonArray BuildToolsJson()
     {
         return new JsonArray(Tools
-            .Where(t => Settings.IsCommandToolEnabled || t.Name != "run_command")
+            .Where(t => Settings.AllowCommandTool || t.Name != "run_command")
             .Where(t => Settings.IsWebToolsEnabled || !WebToolNames.Contains(t.Name))
             .Select(t => (JsonNode)new JsonObject
             {
@@ -755,7 +757,7 @@ public partial class AssistantService : ObservableObject, IAsyncDisposable
                     : "在 bash 中执行一条命令并返回输出。仅在必要时使用。",
                 Schema(("command", "string", "命令", true, null)), true, async (a, ct) =>
                 {
-                    if (!Settings.IsCommandToolEnabled)
+                    if (!Settings.AllowCommandTool)
                         return "命令执行功能未启用。";
                     return await Desktop.RunCommandAsync(GetString(a, "command"), TimeSpan.FromSeconds(30), ct);
                 }),
@@ -832,8 +834,8 @@ public partial class AssistantService : ObservableObject, IAsyncDisposable
     /// </summary>
     private IEnumerable<AssistantTool> GetDshTools() => Tools
         .Where(t => !WebToolNames.Contains(t.Name))
-        .Where(t => Settings.IsDesktopToolsEnabled || ClassIslandToolNames.Contains(t.Name))
-        .Where(t => Settings.IsCommandToolEnabled || t.Name != "run_command");
+        .Where(t => Settings.AllowDesktopTools || ClassIslandToolNames.Contains(t.Name))
+        .Where(t => Settings.AllowCommandTool || t.Name != "run_command");
 
     private Task<string> InvokeToolFromDshAsync(string name, JsonObject args, CancellationToken cancellationToken)
     {
@@ -854,6 +856,9 @@ public partial class AssistantService : ObservableObject, IAsyncDisposable
         var env = new Dictionary<string, string>();
         if (Settings.IsDshApiKeyPassThroughEnabled && !string.IsNullOrWhiteSpace(Settings.ApiKey))
             env["DEEPSEEK_API_KEY"] = Settings.ApiKey.Trim();
+        // DSH 的权限预设：danger-full-access 不使用工作区沙箱，且审批策略为 never。
+        if (Settings.IsFullAccessEnabled)
+            env["DSH_PERMISSION_MODE"] = "danger-full-access";
         return env;
     }
 
@@ -1052,7 +1057,7 @@ public partial class AssistantService : ObservableObject, IAsyncDisposable
 
         var allow = Find("allow_once", "allow_always");
         var reject = Find("reject_once", "reject_always");
-        if (!Settings.ConfirmDangerousOperations)
+        if (!Settings.RequiresConfirmation)
             return allow;
 
         var title = request["toolCall"]?["title"]?.ToString() ?? "执行操作";

@@ -198,6 +198,14 @@
             <!-- 能力 -->
             <ci:IconText Glyph="&#xEF4F;" Text="能力与安全" Margin="0 16 0 4" />
             <fa:SettingsExpander IconSource="{ci:FluentIconSource &#xF4C1;}"
+                                 Header="完全控制电脑（授予全部权限）"
+                                 Description="开启后助手可以执行所有桌面操作和命令行命令，不再弹窗确认；DSH 以完全访问模式运行，不受工作区限制。网页或文件中的恶意内容也可能借此操作电脑，仅在信任所用模型时开启。">
+                <fa:SettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Settings.IsFullAccessEnabled, Mode=TwoWay}" />
+                </fa:SettingsExpander.Footer>
+            </fa:SettingsExpander>
+            <fa:SettingsExpander IconSource="{ci:FluentIconSource &#xF4C1;}"
+                                 IsEnabled="{Binding !Settings.IsFullAccessEnabled}"
                                  Header="允许 AI 操作电脑"
                                  Description="允许 AI 调用工具：打开程序/网址、调节音量、媒体控制、锁屏、显示桌面、截图、查询课表和天气、显示提醒等。">
                 <fa:SettingsExpander.Footer>
@@ -209,10 +217,11 @@
                                  Description="允许 AI 使用必应搜索并读取网页。DSH 自带联网工具，不受此开关影响。">
                 <fa:SettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding Settings.IsWebToolsEnabled, Mode=TwoWay}"
-                                  IsEnabled="{Binding Settings.IsDesktopToolsEnabled}" />
+                                  IsEnabled="{Binding Settings.AllowDesktopTools}" />
                 </fa:SettingsExpander.Footer>
             </fa:SettingsExpander>
             <fa:SettingsExpander IconSource="{ci:FluentIconSource &#xF499;}"
+                                 IsEnabled="{Binding !Settings.IsFullAccessEnabled}"
                                  Header="允许 AI 执行命令行命令"
                                  Description="高风险：AI 将可以在 cmd / bash 中执行任意命令。仅在你信任所用模型时开启。">
                 <fa:SettingsExpander.Footer>
@@ -221,6 +230,7 @@
                 </fa:SettingsExpander.Footer>
             </fa:SettingsExpander>
             <fa:SettingsExpander IconSource="{ci:FluentIconSource &#xEF4F;}"
+                                 IsEnabled="{Binding !Settings.IsFullAccessEnabled}"
                                  Header="高风险操作前确认"
                                  Description="关机/重启、关闭程序、执行命令前弹窗确认。强烈建议保持开启。">
                 <fa:SettingsExpander.Footer>

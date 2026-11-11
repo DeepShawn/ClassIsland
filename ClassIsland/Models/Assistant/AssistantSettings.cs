@@ -71,13 +71,39 @@ public partial class AssistantSettings : ObservableRecipient
     [ObservableProperty] private int _maxHistoryMessages = 20;
 
     /// <summary>是否允许 AI 调用桌面操作工具。</summary>
-    [ObservableProperty] private bool _isDesktopToolsEnabled = true;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AllowDesktopTools))]
+    private bool _isDesktopToolsEnabled = true;
 
     /// <summary>是否允许 AI 执行任意命令行命令（高风险）。</summary>
-    [ObservableProperty] private bool _isCommandToolEnabled = false;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AllowCommandTool))]
+    private bool _isCommandToolEnabled = false;
 
     /// <summary>执行高风险操作（关机、结束进程、运行命令等）前是否需要确认。</summary>
-    [ObservableProperty] private bool _confirmDangerousOperations = true;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RequiresConfirmation))]
+    private bool _confirmDangerousOperations = true;
+
+    /// <summary>
+    /// 完全控制电脑：授予助手全部权限。开启后允许全部桌面操作与命令行命令、不再弹窗确认，
+    /// DSH 以 danger-full-access 权限模式运行（不受工作区沙箱限制，也不请求批准）。
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AllowDesktopTools), nameof(AllowCommandTool), nameof(RequiresConfirmation))]
+    private bool _isFullAccessEnabled = true;
+
+    /// <summary>实际是否允许桌面操作工具。</summary>
+    [JsonIgnore]
+    public bool AllowDesktopTools => IsFullAccessEnabled || IsDesktopToolsEnabled;
+
+    /// <summary>实际是否允许执行命令行命令。</summary>
+    [JsonIgnore]
+    public bool AllowCommandTool => IsFullAccessEnabled || (IsDesktopToolsEnabled && IsCommandToolEnabled);
+
+    /// <summary>执行高风险操作前实际是否需要确认。</summary>
+    [JsonIgnore]
+    public bool RequiresConfirmation => !IsFullAccessEnabled && ConfirmDangerousOperations;
 
     /// <summary>是否朗读 AI 回复。</summary>
     [ObservableProperty] private bool _isSpeakReplyEnabled = false;
