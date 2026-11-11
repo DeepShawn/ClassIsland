@@ -205,7 +205,8 @@ public class UpdateService : IHostedService, INotifyPropertyChanged
             Settings.LastUpdateStatus = UpdateStatus.UpToDate;
         }
         
-        if (Settings.UpdateMode < 1)
+        // 精简模式是本分支的定制版本，上游更新会覆盖掉这些定制功能，因此不自动检查更新。
+        if (Settings.UpdateMode < 1 || Settings.IsLiteModeEnabled)
         {
             return;
         }

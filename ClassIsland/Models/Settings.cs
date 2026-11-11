@@ -77,6 +77,8 @@ public class Settings : ObservableRecipient, ILessonControlSettings, INotificati
     private int _updateMode = 3;
     private bool _autoInstallUpdateNextStartup = true;
     private bool _isDebugOptionsEnabled = false;
+    private bool _isLiteModeEnabled = true;
+    private bool _isGlassThemeMigrated = false;
     private Color _selectedPlatte = Colors.DodgerBlue;
     private int _selectedPlatteIndex = 0;
     private ObservableCollection<Color> _wallpaperColorPlatte = new(Enumerable.Repeat(Colors.DodgerBlue, 5));
@@ -2493,6 +2495,34 @@ public class Settings : ObservableRecipient, ILessonControlSettings, INotificati
         {
             if (value == _isDebugEnabled) return;
             _isDebugEnabled = value;
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>
+    /// 精简模式：只保留课表、天气与 AI 助手，隐藏其余功能并停止自动检查上游更新。
+    /// </summary>
+    public bool IsLiteModeEnabled
+    {
+        get => _isLiteModeEnabled;
+        set
+        {
+            if (value == _isLiteModeEnabled) return;
+            _isLiteModeEnabled = value;
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>
+    /// 是否已为升级用户默认启用过液体玻璃主题。
+    /// </summary>
+    public bool IsGlassThemeMigrated
+    {
+        get => _isGlassThemeMigrated;
+        set
+        {
+            if (value == _isGlassThemeMigrated) return;
+            _isGlassThemeMigrated = value;
             OnPropertyChanged();
         }
     }

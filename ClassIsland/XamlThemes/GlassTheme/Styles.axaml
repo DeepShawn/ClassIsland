@@ -1,0 +1,59 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="using:ClassIsland.Controls"
+        xmlns:ci="http://classisland.tech/schemas/xaml/core">
+    <!--
+        液体玻璃：叠加在 Fluent 主题之上，只替换主界面岛屿的背景、描边与阴影。
+        不使用实时背景模糊（主界面窗口是整条透明窗口，系统亚克力会模糊整块矩形），
+        而是用半透明渐变 + 顶部内高光 + 浅色描边模拟玻璃质感，对低配电脑几乎没有额外渲染开销。
+    -->
+    <Styles.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <LinearGradientBrush x:Key="GlassIslandFillBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Offset="0" Color="#EBFFFFFF" />
+                        <GradientStop Offset="0.5" Color="#D9F4F7FC" />
+                        <GradientStop Offset="1" Color="#CCE6EDF8" />
+                    </LinearGradientBrush>
+                    <LinearGradientBrush x:Key="GlassIslandStrokeBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+                        <GradientStop Offset="0" Color="#FFFFFFFF" />
+                        <GradientStop Offset="0.6" Color="#80FFFFFF" />
+                        <GradientStop Offset="1" Color="#5594A9C9" />
+                    </LinearGradientBrush>
+                    <BoxShadows x:Key="GlassIslandShadow">0 6 18 0 #2A1B2A44, inset 0 1 0 0 #CCFFFFFF</BoxShadows>
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <LinearGradientBrush x:Key="GlassIslandFillBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Offset="0" Color="#D93A4256" />
+                        <GradientStop Offset="0.5" Color="#CC262B38" />
+                        <GradientStop Offset="1" Color="#C21B1F29" />
+                    </LinearGradientBrush>
+                    <LinearGradientBrush x:Key="GlassIslandStrokeBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+                        <GradientStop Offset="0" Color="#8CFFFFFF" />
+                        <GradientStop Offset="0.6" Color="#2EFFFFFF" />
+                        <GradientStop Offset="1" Color="#1AFFFFFF" />
+                    </LinearGradientBrush>
+                    <BoxShadows x:Key="GlassIslandShadow">0 6 18 0 #55000000, inset 0 1 0 0 #40FFFFFF</BoxShadows>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Styles.Resources>
+
+    <Style Selector="controls|MainWindowLine Border.line-background">
+        <Setter Property="Background" Value="{DynamicResource GlassIslandFillBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource GlassIslandStrokeBrush}" />
+        <Setter Property="BoxShadow" Value="{DynamicResource GlassIslandShadow}" />
+    </Style>
+    <!-- 以下两条与 Fluent 主题相同：放在玻璃背景之后，让用户自定义的背景颜色和背景图片仍然优先。 -->
+    <Style Selector="controls|MainWindowLine Border[(ci|MainWindowStylesAssist.IsCustomBackgroundColorEnabled)=True].line-background">
+        <Style.Resources>
+            <ci:ColorToColorPickerBrushConverter x:Key="ColorToColorPickerBrushConverter"/>
+        </Style.Resources>
+        <Setter Property="Background" Value="{Binding $self.(ci:MainWindowStylesAssist.BackgroundColor), Converter={StaticResource ColorToColorPickerBrushConverter}}"/>
+    </Style>
+    <Style Selector="controls|MainWindowLine Border[(ci|MainWindowStylesAssist.IsBackgroundImageEnabled)=True].line-background">
+        <Setter Property="Background" Value="{Binding $self.(ci:MainWindowStylesAssist.BackgroundImageBrush)}"/>
+        <Setter Property="ClipToBounds" Value="True"/>
+    </Style>
+</Styles>

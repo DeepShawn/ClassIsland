@@ -7,7 +7,9 @@ using ClassIsland.Core.Abstractions.Services;
 using ClassIsland.Core.Attributes;
 using ClassIsland.Core.Models.Components;
 using ClassIsland.Core.Services.Registry;
+using ClassIsland.Helpers;
 using ClassIsland.Services;
+using ClassIsland.Shared;
 using ClassIsland.Views;
 using ClassIsland.Views.SettingPages;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -49,7 +51,8 @@ public partial class ComponentsSettingsViewModel : ObservableRecipient
     /// 按来源分组，供"组件库"Tab 展示。
     /// </summary>
     public IReadOnlyList<ComponentGroup> GroupedComponents { get; } =
-        ComponentRegistryService.GetGroupedSortedComponents();
+        LiteModeHelper.FilterComponentGroups(ComponentRegistryService.GetGroupedSortedComponents(),
+            IAppHost.GetService<SettingsService>().Settings.IsLiteModeEnabled);
 
     /// <inheritdoc/>
     public ComponentsSettingsViewModel(IComponentsService componentsService, SettingsService settingsService)

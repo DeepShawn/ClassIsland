@@ -157,6 +157,7 @@ public partial class App
         services.AddTransient<TutorialEditorWindow>();
         services.AddSingleton<TutorialCenterWindow>();
         services.AddSingleton<AssistantWindow>();
+        services.AddSingleton<PetWindow>();
         services.AddTransient<TutorialControllerWindow>();
         services.AddTransient<ISplashProvider, SplashWindow>();
         // 设置页面分组
@@ -325,6 +326,15 @@ public partial class App
             Author = "ClassIsland",
             Url = "https://github.com/ClassIsland/ClassIsland",
             VerticalSafeAreaPx = 20
+        });
+        services.AddXamlTheme(new Uri("avares://ClassIsland/XamlThemes/GlassTheme/Styles.axaml"), new ThemeManifest()
+        {
+            Id = "classisland.glass",
+            Name = "液体玻璃",
+            Description = "半透明的玻璃质感主界面。需要与 Fluent 主题一同启用。",
+            Banner = "avares://ClassIsland/Assets/XamlThemePreviews/classisland.fluent.png",
+            Author = "ClassIsland",
+            Url = "https://github.com/ClassIsland/ClassIsland"
         });
         // 教程
         // services.AddTutorialGroupByUri(new Uri("avares://ClassIsland/Assets/Tutorials/classisland.test.json"));

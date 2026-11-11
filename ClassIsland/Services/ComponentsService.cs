@@ -40,11 +40,11 @@ public class ComponentsService : ObservableRecipient, IComponentsService
                 {
                     new ComponentSettings
                     {
-                        Id = "df3f8295-21f6-482e-bada-fa0e5f14bb66"
+                        Id = "1db2017d-e374-4bc6-9d57-0b4adf03a6b8"
                     },
                     new ComponentSettings
                     {
-                        Id = "1db2017d-e374-4bc6-9d57-0b4adf03a6b8"
+                        Id = "ca495086-e297-4beb-9603-c5c1c1a8551e"
                     }
                 }
             }

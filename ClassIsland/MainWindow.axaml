@@ -58,12 +58,24 @@
             </NativeMenuItem>
             <NativeMenuItem Header="教学…"
                             ci:NativeMenuItemAssist.IconSource="{ci:FluentIconSource &#xE959;}"
-                            Click="NativeMenuItemTutorials_OnClick" 
-                            IsVisible="{Binding ViewModel.Settings.IsWelcomeWindowShowed}"/>
+                            Click="NativeMenuItemTutorials_OnClick">
+                <NativeMenuItem.IsVisible>
+                    <MultiBinding Converter="{x:Static BoolConverters.And}">
+                        <Binding Path="ViewModel.Settings.IsWelcomeWindowShowed"/>
+                        <Binding Path="!ViewModel.Settings.IsLiteModeEnabled"/>
+                    </MultiBinding>
+                </NativeMenuItem.IsVisible>
+            </NativeMenuItem>
             <NativeMenuItem Header="帮助文档…"
                             ci:NativeMenuItemAssist.IconSource="{ci:FluentIconSource &#xE23C;}"
-                            Click="MenuItemHelps_OnClick" 
-                            IsVisible="{Binding ViewModel.Settings.IsWelcomeWindowShowed}"/>
+                            Click="MenuItemHelps_OnClick">
+                <NativeMenuItem.IsVisible>
+                    <MultiBinding Converter="{x:Static BoolConverters.And}">
+                        <Binding Path="ViewModel.Settings.IsWelcomeWindowShowed"/>
+                        <Binding Path="!ViewModel.Settings.IsLiteModeEnabled"/>
+                    </MultiBinding>
+                </NativeMenuItem.IsVisible>
+            </NativeMenuItem>
             <NativeMenuItemSeparator/>
             <NativeMenuItem Header="显示主界面" Click="MenuItemSwitchMainWindowVisibility_OnClick"
                             ci:NativeMenuItemAssist.IconSource="{ci:FluentIconSource &#xE813;}">

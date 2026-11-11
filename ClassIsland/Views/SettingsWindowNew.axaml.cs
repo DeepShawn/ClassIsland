@@ -154,6 +154,7 @@ public partial class SettingsWindowNew : MyWindow, INavigationPageFactory
             .Where(x => !(ManagementService.Policy.DisableSettingsEditing && x.Category == SettingsPageCategory.External))
             .Where(x => !(ManagementService.Policy.DisableDebugMenu && x.Category == SettingsPageCategory.Debug))
             .Where(x => !(!SettingsService.Settings.IsDebugOptionsEnabled && x.Category == SettingsPageCategory.Debug))
+            .Where(x => !(SettingsService.Settings.IsLiteModeEnabled && LiteModeHelper.HiddenSettingsPageIds.Contains(x.Id)))
             .OrderBy(x => x.Category)
             .ToList();
         var infos = infosBase

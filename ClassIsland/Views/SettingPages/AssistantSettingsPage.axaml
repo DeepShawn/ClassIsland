@@ -27,7 +27,7 @@
                         <TextBlock Text="AI 助手" Theme="{StaticResource SubtitleTextBlockStyle}" />
                         <TextBlock TextWrapping="Wrap" Margin="0 4 0 0"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   Text="接入任意 OpenAI 兼容的大模型接口，用自然语言查询课表、天气，或让 AI 帮你操作电脑；也可以通过语音唤醒。" />
+                                   Text="连接 DeepSeek Harness（DSH）或任意 OpenAI 兼容接口，用自然语言查询课表、天气、联网搜索，或让 AI 帮你操作电脑、配置 ClassIsland；喊一声唤醒词就来。" />
                     </StackPanel>
                     <Button Grid.Column="2" Classes="accent" VerticalAlignment="Center"
                             Click="ButtonOpenAssistant_OnClick">
@@ -44,12 +44,78 @@
                 </fa:SettingsExpander.Footer>
             </fa:SettingsExpander>
 
-            <!-- 连接模板 -->
+            <!-- 后端 -->
             <ci:IconText Glyph="&#xEDC7;" Text="连接" Margin="0 16 0 4" />
             <fa:SettingsExpander IconSource="{ci:FluentIconSource &#xEDC7;}"
-                                 Header="连接模板"
-                                 Description="选择模板后接口地址和模型会自动填充，只需填写 API Key 即可连接。"
+                                 Header="对话后端"
+                                 Description="DSH 自带联网搜索、网页读取与电脑操作能力，并可登录 DeepSeek 账号使用；内置 API 只需要一个 API Key。"
                                  IsExpanded="True">
+                <fa:SettingsExpanderItem>
+                    <StackPanel Spacing="4">
+                        <RadioButton GroupName="AssistantBackend" IsChecked="{Binding Settings.IsDshBackend, Mode=TwoWay}"
+                                     Content="DeepSeek Harness（DSH，推荐）" />
+                        <RadioButton GroupName="AssistantBackend" IsChecked="{Binding Settings.IsApiBackend, Mode=TwoWay}"
+                                     Content="内置 API（OpenAI 兼容接口）" />
+                    </StackPanel>
+                </fa:SettingsExpanderItem>
+            </fa:SettingsExpander>
+
+            <!-- DSH -->
+            <fa:SettingsExpander IconSource="{ci:FluentIconSource &#xE275;}"
+                                 Header="DeepSeek Harness（DSH）"
+                                 Description="需要 Node.js 18 或更高版本。首次连接会自动下载 DSH，可能需要一两分钟。"
+                                 IsVisible="{Binding Settings.IsDshBackend}"
+                                 IsExpanded="True">
+                <fa:SettingsExpander.Footer>
+                    <Button Click="ButtonDshLogin_OnClick">
+                        <ci:IconText Glyph="&#xF4C3;" Text="登录 DSH 账号" />
+                    </Button>
+                </fa:SettingsExpander.Footer>
+                <fa:SettingsExpanderItem Content="登录说明"
+                                         Description="点击“登录 DSH 账号”会在浏览器中打开 DSH 网页版，在其中登录 DeepSeek 账号即可；登录信息保存在本机 DSH 中，助手会自动使用。" />
+                <fa:SettingsExpanderItem Content="启动命令"
+                                         Description="已全局安装 DSH（npm i -g @deepseek-ai/dsh）时可改为 dsh。">
+                    <fa:SettingsExpanderItem.Footer>
+                        <TextBox MinWidth="300" Text="{Binding Settings.DshCommand, Mode=TwoWay}" />
+                    </fa:SettingsExpanderItem.Footer>
+                </fa:SettingsExpanderItem>
+                <fa:SettingsExpanderItem Content="工作目录" Description="DSH 读写文件的默认位置，留空使用用户主目录。">
+                    <fa:SettingsExpanderItem.Footer>
+                        <TextBox MinWidth="300" Text="{Binding Settings.DshWorkingDirectory, Mode=TwoWay}"
+                                 Watermark="（用户主目录）" />
+                    </fa:SettingsExpanderItem.Footer>
+                </fa:SettingsExpanderItem>
+                <fa:SettingsExpanderItem Content="让 DSH 使用 ClassIsland 工具"
+                                         Description="DSH 可以查询课表、天气，显示提醒，打开 ClassIsland 设置。仅本机可访问，并使用随机令牌保护。">
+                    <fa:SettingsExpanderItem.Footer>
+                        <ToggleSwitch IsChecked="{Binding Settings.IsDshClassIslandToolsEnabled, Mode=TwoWay}" />
+                    </fa:SettingsExpanderItem.Footer>
+                </fa:SettingsExpanderItem>
+                <fa:SettingsExpanderItem Content="未登录时使用 API Key"
+                                         Description="把下方“连接模板”中填写的 DeepSeek API Key 传给 DSH。">
+                    <fa:SettingsExpanderItem.Footer>
+                        <ToggleSwitch IsChecked="{Binding Settings.IsDshApiKeyPassThroughEnabled, Mode=TwoWay}" />
+                    </fa:SettingsExpanderItem.Footer>
+                </fa:SettingsExpanderItem>
+                <fa:SettingsExpanderItem Content="测试连接">
+                    <fa:SettingsExpanderItem.Footer>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock VerticalAlignment="Center" MaxWidth="320" TextWrapping="Wrap"
+                                       Text="{Binding TestResult}" />
+                            <fa:ProgressRing Width="18" Height="18" IsIndeterminate="True"
+                                             IsVisible="{Binding IsTesting}" />
+                            <Button Content="重新连接" Click="ButtonDshReconnect_OnClick" IsEnabled="{Binding !IsTesting}" />
+                            <Button Content="测试" Click="ButtonTest_OnClick" IsEnabled="{Binding !IsTesting}" />
+                        </StackPanel>
+                    </fa:SettingsExpanderItem.Footer>
+                </fa:SettingsExpanderItem>
+            </fa:SettingsExpander>
+
+            <!-- 连接模板 -->
+            <fa:SettingsExpander IconSource="{ci:FluentIconSource &#xEDC7;}"
+                                 Header="连接模板（内置 API）"
+                                 Description="选择模板后接口地址和模型会自动填充，只需填写 API Key 即可连接。"
+                                 IsExpanded="{Binding Settings.IsApiBackend, Mode=OneWay}">
                 <fa:SettingsExpander.Footer>
                     <ComboBox MinWidth="220" x:Name="ComboBoxTemplate"
                               ItemsSource="{Binding Templates}"
@@ -116,7 +182,7 @@
                         </StackPanel>
                     </fa:SettingsExpanderItem.Footer>
                 </fa:SettingsExpanderItem>
-                <fa:SettingsExpanderItem Content="测试连接">
+                <fa:SettingsExpanderItem Content="测试连接" IsVisible="{Binding Settings.IsApiBackend}">
                     <fa:SettingsExpanderItem.Footer>
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <TextBlock VerticalAlignment="Center" MaxWidth="320" TextWrapping="Wrap"
@@ -132,13 +198,30 @@
             <!-- 能力 -->
             <ci:IconText Glyph="&#xEF4F;" Text="能力与安全" Margin="0 16 0 4" />
             <fa:SettingsExpander IconSource="{ci:FluentIconSource &#xF4C1;}"
+                                 Header="完全控制电脑（授予全部权限）"
+                                 Description="开启后助手可以执行所有桌面操作和命令行命令，不再弹窗确认；DSH 以完全访问模式运行，不受工作区限制。网页或文件中的恶意内容也可能借此操作电脑，仅在信任所用模型时开启。">
+                <fa:SettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Settings.IsFullAccessEnabled, Mode=TwoWay}" />
+                </fa:SettingsExpander.Footer>
+            </fa:SettingsExpander>
+            <fa:SettingsExpander IconSource="{ci:FluentIconSource &#xF4C1;}"
+                                 IsEnabled="{Binding !Settings.IsFullAccessEnabled}"
                                  Header="允许 AI 操作电脑"
                                  Description="允许 AI 调用工具：打开程序/网址、调节音量、媒体控制、锁屏、显示桌面、截图、查询课表和天气、显示提醒等。">
                 <fa:SettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding Settings.IsDesktopToolsEnabled, Mode=TwoWay}" />
                 </fa:SettingsExpander.Footer>
             </fa:SettingsExpander>
+            <fa:SettingsExpander IconSource="{ci:FluentIconSource &#xE80C;}"
+                                 Header="联网搜索（内置 API）"
+                                 Description="允许 AI 使用必应搜索并读取网页。DSH 自带联网工具，不受此开关影响。">
+                <fa:SettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Settings.IsWebToolsEnabled, Mode=TwoWay}"
+                                  IsEnabled="{Binding Settings.AllowDesktopTools}" />
+                </fa:SettingsExpander.Footer>
+            </fa:SettingsExpander>
             <fa:SettingsExpander IconSource="{ci:FluentIconSource &#xF499;}"
+                                 IsEnabled="{Binding !Settings.IsFullAccessEnabled}"
                                  Header="允许 AI 执行命令行命令"
                                  Description="高风险：AI 将可以在 cmd / bash 中执行任意命令。仅在你信任所用模型时开启。">
                 <fa:SettingsExpander.Footer>
@@ -147,6 +230,7 @@
                 </fa:SettingsExpander.Footer>
             </fa:SettingsExpander>
             <fa:SettingsExpander IconSource="{ci:FluentIconSource &#xEF4F;}"
+                                 IsEnabled="{Binding !Settings.IsFullAccessEnabled}"
                                  Header="高风险操作前确认"
                                  Description="关机/重启、关闭程序、执行命令前弹窗确认。强烈建议保持开启。">
                 <fa:SettingsExpander.Footer>
@@ -197,6 +281,39 @@
                         <ToggleSwitch IsChecked="{Binding Settings.ShowWindowOnWake, Mode=TwoWay}" />
                     </fa:SettingsExpanderItem.Footer>
                 </fa:SettingsExpanderItem>
+            </fa:SettingsExpander>
+
+            <!-- 桌面宠物 -->
+            <ci:IconText Glyph="&#xE275;" Text="桌面宠物" Margin="0 16 0 4" />
+            <fa:SettingsExpander IconSource="{ci:FluentIconSource &#xE275;}"
+                                 Header="显示大肥鱼桌宠"
+                                 Description="常驻桌面的 Q 版工作宠物，会随助手的状态（聆听、思考、干活、回复）变换动作。单击打开对话，可拖动到任意位置。">
+                <fa:SettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Settings.IsPetEnabled, Mode=TwoWay}" />
+                </fa:SettingsExpander.Footer>
+                <fa:SettingsExpanderItem Content="大小">
+                    <fa:SettingsExpanderItem.Footer>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Slider Width="200" Minimum="0.5" Maximum="2" TickFrequency="0.1"
+                                    IsSnapToTickEnabled="True"
+                                    Value="{Binding Settings.PetScale, Mode=TwoWay}" />
+                            <TextBlock VerticalAlignment="Center" MinWidth="28"
+                                       Text="{Binding Settings.PetScale, StringFormat={}{0:0.0}x}" />
+                        </StackPanel>
+                    </fa:SettingsExpanderItem.Footer>
+                </fa:SettingsExpanderItem>
+                <fa:SettingsExpanderItem Content="空闲动画" Description="关闭后桌宠空闲时完全静止，进一步降低资源占用。">
+                    <fa:SettingsExpanderItem.Footer>
+                        <ToggleSwitch IsChecked="{Binding Settings.IsPetAnimationEnabled, Mode=TwoWay}" />
+                    </fa:SettingsExpanderItem.Footer>
+                </fa:SettingsExpanderItem>
+                <fa:SettingsExpanderItem Content="重置位置">
+                    <fa:SettingsExpanderItem.Footer>
+                        <Button Content="移回右下角" Click="ButtonResetPetPosition_OnClick" />
+                    </fa:SettingsExpanderItem.Footer>
+                </fa:SettingsExpanderItem>
+                <fa:SettingsExpanderItem Content="形象来源"
+                                         Description="“大肥鱼”立绘来自 RYANFFY/deepseek-dafeiyu-pet（MIT 许可），为社区二创形象，非 DeepSeek 官方出品。" />
             </fa:SettingsExpander>
 
             <!-- 高级 -->

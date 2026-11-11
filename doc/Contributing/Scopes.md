@@ -54,6 +54,7 @@
 | xaml-theme            | 主界面 XAML 主题服务 |
 | window-rule           | 窗口规则服务        |
 | metadata/announcement | 公告服务          |
+| assistant             | AI 助手、语音助手与桌面宠物 |
 
 特别的，在以上类别前方加上`ui/`可用于指有关这些子系统的界面部分的更改。
 
